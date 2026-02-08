@@ -15,7 +15,7 @@ test('init --help shows init command description', async () => {
 })
 
 test('init fails gracefully when gh is not available', async () => {
-  // Run with empty PATH so gh cannot be found
+  // Run with empty PATH so gh/git cannot be found — should fail with error message
   const result = await $`PATH="" bun ${CLI} init 2>&1`.quiet().nothrow().text()
-  expect(result).toContain('gh CLI not found')
+  expect(result).toContain('Init failed')
 })

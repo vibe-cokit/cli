@@ -1,39 +1,62 @@
-#!/usr/bin/env bun
-import { $ } from 'bun'
 import { homedir } from 'os'
-import { join } from 'path'
+import { join, resolve } from 'path'
+import { mkdir, cp, rm, readdir, stat } from 'fs/promises'
+import { execFile } from 'child_process'
+import { promisify } from 'util'
+
+const exec = promisify(execFile)
 
 const REPO = 'vibe-cokit/claude-code'
 const CLAUDE_DIR = join(homedir(), '.claude')
 const CONFIG_FOLDERS = ['agents', 'commands', 'hooks', 'prompts', 'workflows'] as const
+const TEMP_DIR = join(homedir(), '.vibe-cokit-tmp')
 
 function log(step: string) {
   console.log(`  → ${step}`)
 }
 
 async function verifyPrerequisites() {
-  const gh = await $`which gh`.quiet().nothrow()
-  if (gh.exitCode !== 0) {
+  try {
+    await exec('gh', ['--version'])
+  } catch {
     throw new Error('gh CLI not found. Install: https://cli.github.com')
   }
 }
 
 async function cloneRepo(tmpDir: string) {
-  const result = await $`gh repo clone ${REPO} ${tmpDir}`.quiet().nothrow()
-  if (result.exitCode !== 0) {
-    throw new Error(`Failed to clone repo: ${result.stderr.toString().trim()}`)
+  try {
+    await exec('gh', ['repo', 'clone', REPO, tmpDir])
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    throw new Error(`Failed to clone repo: ${msg}`)
+  }
+}
+
+async function dirExists(path: string): Promise<boolean> {
+  try {
+    const s = await stat(path)
+    return s.isDirectory()
+  } catch {
+    return false
+  }
+}
+
+async function fileExists(path: string): Promise<boolean> {
+  try {
+    const s = await stat(path)
+    return s.isFile()
+  } catch {
+    return false
   }
 }
 
 async function copyConfigFolders(srcDir: string) {
-  await $`mkdir -p ${CLAUDE_DIR}`.quiet()
+  await mkdir(CLAUDE_DIR, { recursive: true })
   for (const folder of CONFIG_FOLDERS) {
     const src = join(srcDir, folder)
-    const exists = await Bun.file(join(src, '.')).exists().catch(() => false)
-    // Use cp -r to copy if folder exists in source
-    const check = await $`test -d ${src}`.quiet().nothrow()
-    if (check.exitCode === 0) {
-      await $`cp -r ${src} ${CLAUDE_DIR}/`.quiet()
+    if (await dirExists(src)) {
+      const dest = join(CLAUDE_DIR, folder)
+      await cp(src, dest, { recursive: true, force: true })
       log(`Copied ${folder}/`)
     }
   }
@@ -42,24 +65,24 @@ async function copyConfigFolders(srcDir: string) {
 async function copyClaudeMd(srcDir: string) {
   const src = join(srcDir, 'CLAUDE.md')
   const dest = join(process.cwd(), 'CLAUDE.md')
-  const check = await $`test -f ${src}`.quiet().nothrow()
-  if (check.exitCode === 0) {
-    await $`cp ${src} ${dest}`.quiet()
+  if (await fileExists(src)) {
+    await cp(src, dest, { force: true })
   }
 }
 
 async function runClaudeInit() {
-  const result = await $`claude init`.quiet().nothrow()
-  if (result.exitCode !== 0) {
+  try {
+    await exec('claude', ['init'])
+    return true
+  } catch {
     console.log('  ⚠ claude CLI not available, skipping CLAUDE.md enrichment')
     return false
   }
-  return true
 }
 
 async function getCommitSha(tmpDir: string): Promise<string> {
-  const sha = await $`git -C ${tmpDir} rev-parse HEAD`.text()
-  return sha.trim()
+  const { stdout } = await exec('git', ['-C', tmpDir, 'rev-parse', 'HEAD'])
+  return stdout.trim()
 }
 
 async function updateSettings(commitSha: string) {
@@ -76,11 +99,15 @@ async function updateSettings(commitSha: string) {
 }
 
 async function cleanup(tmpDir: string) {
-  await $`rm -rf ${tmpDir}`.quiet().nothrow()
+  try {
+    await rm(tmpDir, { recursive: true, force: true })
+  } catch {
+    // ignore cleanup errors
+  }
 }
 
 export async function initCommand() {
-  const tmpDir = `/tmp/vibe-cokit-${crypto.randomUUID()}`
+  const tmpDir = join(TEMP_DIR, crypto.randomUUID())
 
   try {
     console.log('\nvibe-cokit init\n')
