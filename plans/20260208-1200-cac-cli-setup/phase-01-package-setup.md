@@ -21,7 +21,7 @@
 1. Install `cac` as production dependency
 2. Rename package from `cli` to `vibe-cokit`
 3. Add `version` field to package.json
-4. Configure `bin` field with both `vibe-cokit` and `vck` aliases
+4. Configure `bin` field with both `vibe-cokit` and `vk` aliases
 5. Set `module` to point to new CLI entry
 
 ## Architecture
@@ -32,7 +32,7 @@ package.json
 ├── version: "0.1.0"
 ├── bin:
 │   ├── vibe-cokit → "./src/cli.ts"
-│   └── vck → "./src/cli.ts"
+│   └── vk → "./src/cli.ts"
 └── dependencies:
     └── cac: "^6"
 ```
@@ -49,7 +49,7 @@ package.json
    - `name`: `"vibe-cokit"`
    - `version`: `"0.1.0"`
    - `description`: `"A toolkit for interacting with Claude Code"`
-   - `bin`: `{ "vibe-cokit": "./src/cli.ts", "vck": "./src/cli.ts" }`
+   - `bin`: `{ "vibe-cokit": "./src/cli.ts", "vk": "./src/cli.ts" }`
    - Remove `private: true` (needed for bin linking)
 3. Keep `index.ts` as library entry, add `src/cli.ts` as CLI entry
 
@@ -63,7 +63,7 @@ package.json
 
 - `cac` in dependencies
 - `bun run vibe-cokit --version` outputs version
-- Both `vibe-cokit` and `vck` bin names configured
+- Both `vibe-cokit` and `vk` bin names configured
 
 ## Risk Assessment
 

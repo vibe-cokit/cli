@@ -36,7 +36,7 @@ index.ts            # Library entry (future: re-exports)
 
 ### CLI Flow
 ```
-User runs `vck` or `vibe-cokit`
+User runs `vk` or `vibe-cokit`
   → src/cli.ts
     → cac("vibe-cokit")
     → register global options
@@ -102,4 +102,4 @@ User runs `vck` or `vibe-cokit`
 
 ## Next Steps
 
-→ Future: Add feature commands (e.g., `vck init`, `vck config`)
+→ Future: Add feature commands (e.g., `vk init`, `vk config`)

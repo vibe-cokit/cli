@@ -18,7 +18,7 @@ Set up `cac` CLI framework for `vibe-cokit` — a toolkit for interacting with C
 ## Target State
 
 - `cac` installed as CLI framework
-- Executable binary `vibe-cokit` (alias `vck`)
+- Executable binary `vibe-cokit` (alias `vk`)
 - CLI skeleton with help/version built-in
 - Extensible command structure ready for feature commands
 - Runnable via `bunx vibe-cokit` or `bun link` globally

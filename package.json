@@ -6,7 +6,7 @@
   "type": "module",
   "bin": {
     "vibe-cokit": "./src/cli.ts",
-    "vck": "./src/cli.ts"
+    "vk": "./src/cli.ts"
   },
   "devDependencies": {
     "@types/bun": "latest"
