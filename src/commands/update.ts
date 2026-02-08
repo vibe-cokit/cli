@@ -12,6 +12,7 @@ import {
   cleanup,
   getCurrentVersion,
   getRemoteSha,
+  upgradeCli,
 } from '../utils/config'
 
 const exec = promisify(execFile)
@@ -25,14 +26,28 @@ export async function updateCommand(ref?: string) {
     log('Verifying prerequisites...')
     await verifyPrerequisites()
 
-    log('Checking current version...')
+    // Upgrade CLI binary
+    log('Checking CLI version...')
+    try {
+      const { upgraded, from, to } = await upgradeCli()
+      if (upgraded) {
+        log(`CLI upgraded: ${from} → ${to}`)
+      } else {
+        log(`CLI: v${from} (latest)`)
+      }
+    } catch {
+      log('CLI upgrade skipped (npm registry unavailable)')
+    }
+
+    // Update config
+    log('Checking config version...')
     const currentSha = await getCurrentVersion()
 
-    log('Fetching latest version info...')
+    log('Fetching latest config version...')
     const targetSha = await getRemoteSha(ref)
 
     if (currentSha && currentSha === targetSha) {
-      console.log(`\n✓ Already up-to-date (${currentSha.slice(0, 8)})\n`)
+      console.log(`\n✓ Config already up-to-date (${currentSha.slice(0, 8)})\n`)
       return
     }
 

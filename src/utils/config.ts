@@ -161,3 +161,19 @@ export async function getSkillsVersion(): Promise<string | null> {
   }
   return null
 }
+
+export async function upgradeCli(): Promise<{ upgraded: boolean; from: string; to: string }> {
+  const { version: currentVersion } = await import('../../package.json')
+
+  // Get latest version from npm registry
+  const { stdout: latestRaw } = await exec('npm', ['view', 'vibe-cokit', 'version'])
+  const latestVersion = latestRaw.trim()
+
+  if (currentVersion === latestVersion) {
+    return { upgraded: false, from: currentVersion, to: latestVersion }
+  }
+
+  await exec('bun', ['install', '-g', `vibe-cokit@${latestVersion}`])
+  return { upgraded: true, from: currentVersion, to: latestVersion }
+}
+
