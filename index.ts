@@ -1,1 +1,1 @@
-console.log("Hello via Bun!");
+// vibe-cokit — A toolkit for interacting with Claude Code

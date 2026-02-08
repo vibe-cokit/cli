@@ -45,6 +45,12 @@ import index from "./index.html"
 Bun.serve({ routes: { "/": index } })
 ```
 
+## Testing
+
+- Test files go in `tests/` directory, NOT alongside source files
+- Naming: `tests/<module>.test.ts` mirroring the source structure
+- Run all: `bun test` | Run one: `bun test tests/<file>.test.ts`
+
 ## TypeScript Config
 
 - Strict mode enabled with `noUncheckedIndexedAccess` and `noImplicitOverride`
