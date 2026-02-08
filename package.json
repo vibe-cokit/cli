@@ -5,10 +5,11 @@
   "module": "index.ts",
   "type": "module",
   "bin": {
-    "vibe-cokit": "./dist/cli.js",
-    "vk": "./dist/cli.js"
+    "vibe-cokit": "bin/vk.cjs",
+    "vk": "bin/vk.cjs"
   },
   "files": [
+    "bin/",
     "dist/",
     "package.json",
     "README.md"
@@ -22,7 +23,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/vibe-cokit/cli.git"
+    "url": "git+https://github.com/vibe-cokit/cli.git"
   },
   "devDependencies": {
     "@types/bun": "latest"
