@@ -52,18 +52,16 @@ export async function skillsCommand(ref?: string) {
     const sha = await getCommitSha(tmpDir)
     await updateSkillsVersion(sha)
 
-    log('Cleaning up...')
-    await cleanup(tmpDir)
-
     const from = currentSha ? currentSha.slice(0, 8) : 'none'
     console.log(`\n✓ Skills installed successfully!`)
     console.log(`  From:    ${from}`)
     console.log(`  To:      ${sha.slice(0, 8)}`)
     console.log(`  Skills:  ~/.claude/skills/\n`)
   } catch (err) {
-    await cleanup(tmpDir)
     const msg = err instanceof Error ? err.message : String(err)
     console.error(`\n✗ Skills setup failed: ${msg}\n`)
     process.exit(1)
+  } finally {
+    await cleanup(tmpDir)
   }
 }

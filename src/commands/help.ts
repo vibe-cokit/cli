@@ -11,9 +11,9 @@ COMMANDS
                     Clones config repo, copies agents/commands/hooks/prompts/workflows
                     to ~/.claude/, adds CLAUDE.md to current directory, runs claude init
 
-  update [ref]      Update vibe-cokit CLI + config to latest or specific version
-                    Upgrades CLI package via npm, then updates config files
-                    Compares local version with remote, skips if already up-to-date
+  update [ref]      Update everything: CLI + config + skills
+                    Upgrades CLI package via npm, updates config and skills
+                    Compares versions with remote, skips if already up-to-date
                     Aliases: upgrade
 
   skills [ref]      Install or update skills from vibe-cokit skills repo
@@ -29,7 +29,7 @@ COMMANDS
 
 EXAMPLES
   vk init                    # Initialize vibe-cokit in current project
-  vk update                  # Upgrade CLI + update config to latest
+  vk update                  # Update CLI + config + skills
   vk update v1.2.0           # Update to specific tag
   vk skills                  # Install/update all skills
   vk skills main             # Install skills from specific branch

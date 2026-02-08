@@ -22,7 +22,7 @@ cli
   .action(initCommand)
 
 cli
-  .command('update [ref]', 'Update vibe-cokit to latest or specific version')
+  .command('update [ref]', 'Update CLI, config, and skills to latest')
   .alias('upgrade')
   .action(updateCommand)
 

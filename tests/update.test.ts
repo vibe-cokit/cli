@@ -6,7 +6,7 @@ const CLI = './src/cli.ts'
 test('--help shows update command', async () => {
   const result = await $`bun ${CLI} --help`.text()
   expect(result).toContain('update')
-  expect(result).toContain('Update vibe-cokit to latest or specific version')
+  expect(result).toContain('Update CLI, config, and skills to latest')
 })
 
 test('update --help shows description and [ref] arg', async () => {

@@ -37,17 +37,15 @@ export async function initCommand() {
     const sha = await getCommitSha(tmpDir)
     await updateSettings(sha)
 
-    log('Cleaning up...')
-    await cleanup(tmpDir)
-
     console.log('\n✓ vibe-cokit initialized successfully!')
     console.log(`  Version: ${sha.slice(0, 8)}`)
     console.log(`  Config:  ~/.claude/`)
     console.log(`  Claude:  ./CLAUDE.md\n`)
   } catch (err) {
-    await cleanup(tmpDir)
     const msg = err instanceof Error ? err.message : String(err)
     console.error(`\n✗ Init failed: ${msg}\n`)
     process.exit(1)
+  } finally {
+    await cleanup(tmpDir)
   }
 }
