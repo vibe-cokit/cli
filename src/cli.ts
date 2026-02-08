@@ -3,6 +3,7 @@ import cac from 'cac'
 import { version } from '../package.json'
 import { initCommand } from './commands/init'
 import { updateCommand } from './commands/update'
+import { skillsCommand } from './commands/skills'
 
 const cli = cac('vibe-cokit')
 
@@ -20,6 +21,10 @@ cli
   .command('update [ref]', 'Update vibe-cokit to latest or specific version')
   .alias('upgrade')
   .action(updateCommand)
+
+cli
+  .command('skills [ref]', 'Install or update skills from vibe-cokit')
+  .action(skillsCommand)
 
 cli.help()
 cli.version(version)
