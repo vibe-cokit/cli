@@ -5,15 +5,18 @@
   "module": "index.ts",
   "type": "module",
   "bin": {
-    "vibe-cokit": "./src/cli.ts",
-    "vk": "./src/cli.ts"
+    "vibe-cokit": "./dist/cli.js",
+    "vk": "./dist/cli.js"
   },
   "files": [
-    "src/",
-    "index.ts",
+    "dist/",
     "package.json",
     "README.md"
   ],
+  "scripts": {
+    "build": "bun build src/cli.ts --outdir dist --target bun",
+    "typecheck": "bunx tsc --noEmit"
+  },
   "publishConfig": {
     "access": "public"
   },
