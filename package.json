@@ -8,6 +8,19 @@
     "vibe-cokit": "./src/cli.ts",
     "vk": "./src/cli.ts"
   },
+  "files": [
+    "src/",
+    "index.ts",
+    "package.json",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vibe-cokit/cli.git"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
