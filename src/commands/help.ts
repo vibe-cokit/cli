@@ -20,6 +20,12 @@ COMMANDS
                     Copies skill folders to ~/.claude/skills/
                     Tracks version separately via skillsVersion in settings.json
 
+  mcp install       Install MCP servers (serena, context7, brave-search, etc.)
+  mcp uninstall     Remove MCP servers
+
+  plugin install    Install Claude Code plugins (code-review, typescript-lsp, etc.)
+  plugin uninstall  Remove Claude Code plugins
+
   help              Show this detailed usage guide
 
   version           Show version and installed commit IDs
@@ -28,14 +34,19 @@ COMMANDS
   doctor --fix      Auto-fix missing config, skills, or CLAUDE.md
 
 EXAMPLES
-  vk init                    # Initialize vibe-cokit in current project
-  vk update                  # Update CLI + config + skills
-  vk update v1.2.0           # Update to specific tag
-  vk skills                  # Install/update all skills
-  vk skills main             # Install skills from specific branch
-  vk version                 # Show version and commit IDs
-  vk doctor                  # Health check setup
-  vk doctor --fix            # Auto-fix setup issues
+  vk init                                  # Initialize vibe-cokit
+  vk update                                # Update CLI + config + skills
+  vk skills                                # Install/update all skills
+  vk mcp install                           # List available MCP modules
+  vk mcp install serena context7           # Install specific MCP servers
+  vk mcp install --all                     # Install all MCP servers
+  vk mcp uninstall serena                  # Remove an MCP server
+  vk plugin install                        # List available plugins
+  vk plugin install context7 code-review   # Install specific plugins
+  vk plugin install --all                  # Install all plugins
+  vk plugin uninstall hookify              # Remove a plugin
+  vk doctor                                # Health check setup
+  vk doctor --fix                          # Auto-fix setup issues
 
 OPTIONS
   -h, --help        Show brief help

@@ -8,6 +8,8 @@ import { helpCommand } from './commands/help'
 import { versionCommand } from './commands/version'
 import { doctorCommand } from './commands/doctor'
 import { doctorFixCommand } from './commands/doctor-fix'
+import { mcpCommand } from './commands/mcp'
+import { pluginCommand } from './commands/plugin'
 
 const cli = cac('vibe-cokit')
 
@@ -44,6 +46,20 @@ cli
   .action((options: { fix?: boolean }) => {
     if (options.fix) return doctorFixCommand()
     return doctorCommand()
+  })
+
+cli
+  .command('mcp [action] [...modules]', 'Manage MCP servers (install/uninstall)')
+  .option('--all', 'Apply to all available modules')
+  .action((action: string | undefined, modules: string[], options: { all?: boolean }) => {
+    return mcpCommand(action, modules, options)
+  })
+
+cli
+  .command('plugin [action] [...plugins]', 'Manage plugins (install/uninstall)')
+  .option('--all', 'Apply to all available plugins')
+  .action((action: string | undefined, plugins: string[], options: { all?: boolean }) => {
+    return pluginCommand(action, plugins, options)
   })
 
 cli.help()
