@@ -18,6 +18,7 @@ import {
   getRemoteSha,
   upgradeCli,
 } from '../utils/config'
+import { getErrorMsg } from '../utils/helpers'
 
 const exec = promisify(execFile)
 
@@ -49,7 +50,7 @@ export async function updateCommand(ref?: string) {
 
     console.log('\n✓ vibe-cokit update complete!\n')
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMsg(err)
     console.error(`\n✗ Update failed: ${msg}\n`)
     process.exit(1)
   }

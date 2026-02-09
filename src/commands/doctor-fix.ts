@@ -1,4 +1,5 @@
 import { join } from 'path'
+import { some } from 'lodash-es'
 import {
   CLAUDE_DIR,
   SKILLS_DIR,
@@ -20,6 +21,7 @@ import {
   getSkillsVersion,
   cleanup,
 } from '../utils/config'
+import { getErrorMsg, plural } from '../utils/helpers'
 
 export async function doctorFixCommand() {
   console.log('\nvibe-cokit doctor fix\n')
@@ -28,16 +30,16 @@ export async function doctorFixCommand() {
     log('Verifying prerequisites...')
     await verifyPrerequisites()
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    console.error(`\n✗ Cannot fix: ${msg}\n`)
+    console.error(`\n✗ Cannot fix: ${getErrorMsg(err)}\n`)
     process.exit(1)
   }
 
   let fixed = 0
 
   // Check if config or CLAUDE.md needs fixing (both use same repo)
+  const folderChecks = await Promise.all(CONFIG_FOLDERS.map(f => dirExists(join(CLAUDE_DIR, f))))
   const configMissing = !(await dirExists(CLAUDE_DIR)) ||
-    (await Promise.all(CONFIG_FOLDERS.map(f => dirExists(join(CLAUDE_DIR, f))))).some(exists => !exists) ||
+    some(folderChecks, exists => !exists) ||
     !(await getCurrentVersion())
 
   const claudeMdPath = join(process.cwd(), 'CLAUDE.md')
@@ -69,8 +71,7 @@ export async function doctorFixCommand() {
         log('CLAUDE.md: OK')
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      console.error(`  ✗ Config/CLAUDE.md fix failed: ${msg}`)
+      console.error(`  ✗ Config/CLAUDE.md fix failed: ${getErrorMsg(err)}`)
     } finally {
       await cleanup(tmpDir)
     }
@@ -93,8 +94,7 @@ export async function doctorFixCommand() {
       log(`Skills installed (${sha.slice(0, 8)})`)
       fixed++
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      console.error(`  ✗ Skills fix failed: ${msg}`)
+      console.error(`  ✗ Skills fix failed: ${getErrorMsg(err)}`)
     } finally {
       await cleanup(tmpDir)
     }
@@ -105,7 +105,7 @@ export async function doctorFixCommand() {
   console.log()
 
   if (fixed > 0) {
-    console.log(`  ✓ Fixed ${fixed} issue${fixed > 1 ? 's' : ''}!\n`)
+    console.log(`  ✓ Fixed ${plural(fixed, 'issue')}!\n`)
   } else {
     console.log('  ✓ Nothing to fix — all good!\n')
   }

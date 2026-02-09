@@ -3,6 +3,8 @@ import { join } from 'path'
 import { mkdir, cp, rm, stat, readdir } from 'fs/promises'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
+import { get } from 'lodash-es'
+import { getErrorMsg } from './helpers'
 
 const exec = promisify(execFile)
 
@@ -12,6 +14,7 @@ export const CLAUDE_DIR = join(homedir(), '.claude')
 export const SKILLS_DIR = join(CLAUDE_DIR, 'skills')
 export const CONFIG_FOLDERS = ['agents', 'commands', 'hooks', 'prompts', 'workflows'] as const
 export const TEMP_DIR = join(homedir(), '.vibe-cokit-tmp')
+const SETTINGS_PATH = join(CLAUDE_DIR, 'settings.json')
 
 export function log(step: string) {
   console.log(`  → ${step}`)
@@ -29,8 +32,7 @@ export async function cloneRepo(tmpDir: string, repo: string = REPO) {
   try {
     await exec('gh', ['repo', 'clone', repo, tmpDir])
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err)
-    throw new Error(`Failed to clone repo: ${msg}`)
+    throw new Error(`Failed to clone repo: ${getErrorMsg(err)}`)
   }
 }
 
@@ -87,17 +89,20 @@ export async function getCommitSha(tmpDir: string): Promise<string> {
   return stdout.trim()
 }
 
+async function readSettings(): Promise<Record<string, unknown>> {
+  const file = Bun.file(SETTINGS_PATH)
+  if (await file.exists()) return file.json()
+  return {}
+}
+
+async function writeSettings(settings: Record<string, unknown>) {
+  await Bun.write(SETTINGS_PATH, JSON.stringify(settings, null, 2))
+}
+
 export async function updateSettings(commitSha: string) {
-  const settingsPath = join(CLAUDE_DIR, 'settings.json')
-  let settings: Record<string, unknown> = {}
-
-  const file = Bun.file(settingsPath)
-  if (await file.exists()) {
-    settings = await file.json()
-  }
-
+  const settings = await readSettings()
   settings.version = commitSha
-  await Bun.write(settingsPath, JSON.stringify(settings, null, 2))
+  await writeSettings(settings)
 }
 
 export async function cleanup(tmpDir: string) {
@@ -109,13 +114,8 @@ export async function cleanup(tmpDir: string) {
 }
 
 export async function getCurrentVersion(): Promise<string | null> {
-  const settingsPath = join(CLAUDE_DIR, 'settings.json')
-  const file = Bun.file(settingsPath)
-  if (await file.exists()) {
-    const settings = await file.json()
-    return settings.version ?? null
-  }
-  return null
+  const settings = await readSettings()
+  return get(settings, 'version', null) as string | null
 }
 
 export async function getRemoteSha(ref?: string, repo: string = REPO): Promise<string> {
@@ -140,33 +140,21 @@ export async function copySkillFolders(srcDir: string) {
 }
 
 export async function updateSkillsVersion(commitSha: string) {
-  const settingsPath = join(CLAUDE_DIR, 'settings.json')
-  let settings: Record<string, unknown> = {}
-
-  const file = Bun.file(settingsPath)
-  if (await file.exists()) {
-    settings = await file.json()
-  }
-
+  const settings = await readSettings()
   settings.skillsVersion = commitSha
-  await Bun.write(settingsPath, JSON.stringify(settings, null, 2))
+  await writeSettings(settings)
 }
 
 export async function getSkillsVersion(): Promise<string | null> {
-  const settingsPath = join(CLAUDE_DIR, 'settings.json')
-  const file = Bun.file(settingsPath)
-  if (await file.exists()) {
-    const settings = await file.json()
-    return settings.skillsVersion ?? null
-  }
-  return null
+  const settings = await readSettings()
+  return get(settings, 'skillsVersion', null) as string | null
 }
 
 export async function upgradeCli(): Promise<{ upgraded: boolean; from: string; to: string }> {
   // Get currently installed version from bun global packages
   const { stdout: installedRaw } = await exec('bun', ['pm', 'ls', '-g'])
   const match = installedRaw.match(/vibe-cokit@(\S+)/)
-  const currentVersion = match ? match[1] : '0.0.0'
+  const currentVersion = match?.[1] ?? '0.0.0'
 
   // Get latest version from npm registry
   const { stdout: latestRaw } = await exec('npm', ['view', 'vibe-cokit', 'version'])
@@ -179,4 +167,3 @@ export async function upgradeCli(): Promise<{ upgraded: boolean; from: string; t
   await exec('bun', ['install', '-g', `vibe-cokit@${latestVersion}`])
   return { upgraded: true, from: currentVersion, to: latestVersion }
 }
-

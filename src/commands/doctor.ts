@@ -1,5 +1,4 @@
-import { execFile } from 'child_process'
-import { promisify } from 'util'
+import { join } from 'path'
 import {
   CLAUDE_DIR,
   SKILLS_DIR,
@@ -9,18 +8,7 @@ import {
   getCurrentVersion,
   getSkillsVersion,
 } from '../utils/config'
-import { join } from 'path'
-
-const exec = promisify(execFile)
-
-async function checkBin(name: string): Promise<string | null> {
-  try {
-    const { stdout } = await exec(name, ['--version'])
-    return stdout.trim().split('\n')[0] ?? null
-  } catch {
-    return null
-  }
-}
+import { checkBinVersion, plural } from '../utils/helpers'
 
 export async function doctorCommand() {
   console.log('\nvibe-cokit doctor\n')
@@ -30,7 +18,7 @@ export async function doctorCommand() {
   // Check CLI tools
   const tools = ['gh', 'git', 'claude'] as const
   for (const tool of tools) {
-    const ver = await checkBin(tool)
+    const ver = await checkBinVersion(tool)
     if (ver) {
       console.log(`  ✓ ${tool}: ${ver}`)
     } else {
@@ -95,6 +83,6 @@ export async function doctorCommand() {
   if (issues === 0) {
     console.log('  ✓ All checks passed!\n')
   } else {
-    console.log(`  ⚠ ${issues} issue${issues > 1 ? 's' : ''} found\n`)
+    console.log(`  ⚠ ${plural(issues, 'issue')} found\n`)
   }
 }

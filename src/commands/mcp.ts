@@ -1,6 +1,15 @@
+import { keys, some, mapValues } from 'lodash-es'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { log } from '../utils/config'
+import {
+  getErrorMsg,
+  checkBin,
+  requireClaude,
+  printSummary,
+  listRegistry,
+  validateTargets,
+} from '../utils/helpers'
 
 const exec = promisify(execFile)
 
@@ -70,42 +79,16 @@ const MCP_MODULES: Record<string, McpModule> = {
   },
 }
 
-function listModules() {
-  console.log('\nAvailable MCP modules:\n')
-  const maxName = Math.max(...Object.keys(MCP_MODULES).map(k => k.length))
-  for (const [key, mod] of Object.entries(MCP_MODULES)) {
-    console.log(`  ${key.padEnd(maxName + 2)}${mod.description}`)
-  }
-  console.log(`\nUsage:`)
-  console.log(`  vk mcp install <module> [module2 ...]`)
-  console.log(`  vk mcp install --all`)
-  console.log(`  vk mcp uninstall <module> [module2 ...]`)
-  console.log()
-}
-
-async function checkClaude(): Promise<boolean> {
-  try { await exec('claude', ['--version']); return true } catch { return false }
-}
-
-async function checkUv(): Promise<boolean> {
-  try { await exec('uvx', ['--version']); return true } catch { return false }
-}
-
 async function addModule(mod: McpModule): Promise<boolean> {
   const config: Record<string, unknown> = { command: mod.command, args: mod.args }
   if (mod.env) {
-    const envConfig: Record<string, string> = {}
-    for (const [key, defaultVal] of Object.entries(mod.env)) {
-      envConfig[key] = process.env[key] || defaultVal
-    }
-    config.env = envConfig
+    config.env = mapValues(mod.env, (defaultVal, key) => process.env[key] || defaultVal)
   }
   try {
     await exec('claude', ['mcp', 'add-json', mod.name, JSON.stringify(config)])
     return true
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    console.error(`  ✗ Failed to add ${mod.name}: ${msg}`)
+    console.error(`  ✗ Failed to add ${mod.name}: ${getErrorMsg(err)}`)
     return false
   }
 }
@@ -115,7 +98,7 @@ async function removeModule(name: string): Promise<boolean> {
     await exec('claude', ['mcp', 'remove', name])
     return true
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMsg(err)
     if (msg.includes('not found') || msg.includes('does not exist')) {
       console.log(`  ⚠ ${name} not configured, skipping`)
       return true
@@ -139,25 +122,24 @@ export async function mcpCommand(action: string | undefined, modules: string[], 
 }
 
 async function mcpInstallCommand(modules: string[], options: { all?: boolean }) {
-  if (modules.length === 0 && !options.all) { listModules(); return }
+  if (modules.length === 0 && !options.all) {
+    listRegistry(MCP_MODULES, 'Available MCP modules:', [
+      'vk mcp install <module> [module2 ...]',
+      'vk mcp install --all',
+      'vk mcp uninstall <module> [module2 ...]',
+    ])
+    return
+  }
 
   log('Checking claude CLI...')
-  if (!(await checkClaude())) {
-    console.error('\n✗ claude CLI not found.\n')
-    process.exit(1)
-  }
+  await requireClaude()
 
-  const targets = options.all ? Object.keys(MCP_MODULES) : modules
-  const invalid = targets.filter(m => !MCP_MODULES[m])
-  if (invalid.length > 0) {
-    console.error(`\n✗ Unknown modules: ${invalid.join(', ')}`)
-    console.error(`  Run 'vk mcp install' to see available modules.\n`)
-    process.exit(1)
-  }
+  const targets = options.all ? keys(MCP_MODULES) : modules
+  validateTargets(targets, MCP_MODULES, 'modules', 'vk mcp install')
 
-  if (targets.some(m => MCP_MODULES[m]?.requiresUv)) {
+  if (some(targets, m => MCP_MODULES[m]?.requiresUv)) {
     log('Checking uv/uvx...')
-    if (!(await checkUv())) {
+    if (!(await checkBin('uvx'))) {
       console.error('\n✗ uvx not found (required for serena). Install: https://docs.astral.sh/uv/\n')
       process.exit(1)
     }
@@ -165,12 +147,10 @@ async function mcpInstallCommand(modules: string[], options: { all?: boolean }) 
 
   for (const name of targets) {
     const mod = MCP_MODULES[name]
-    if (!mod) continue
-    if (mod.envPrompts) {
-      for (const [key, prompt] of Object.entries(mod.envPrompts)) {
-        if (!process.env[key] && mod.env && !mod.env[key]) {
-          console.log(`  ⚠ ${name}: ${prompt} not set (env: ${key})`)
-        }
+    if (!mod?.envPrompts) continue
+    for (const [key, prompt] of Object.entries(mod.envPrompts)) {
+      if (!process.env[key] && mod.env && !mod.env[key]) {
+        console.log(`  ⚠ ${name}: ${prompt} not set (env: ${key})`)
       }
     }
   }
@@ -183,10 +163,7 @@ async function mcpInstallCommand(modules: string[], options: { all?: boolean }) 
     if (await addModule(mod)) { log(`${mod.name} ✓`); ok++ } else { fail++ }
   }
 
-  console.log()
-  if (ok > 0) console.log(`  ✓ Installed ${ok} MCP module${ok > 1 ? 's' : ''}`)
-  if (fail > 0) console.log(`  ✗ Failed: ${fail}`)
-  if (ok > 0) console.log(`\n  Restart Claude Code to activate.\n`)
+  printSummary(ok, fail, 'MCP module', 'Installed')
 }
 
 async function mcpUninstallCommand(modules: string[]) {
@@ -196,10 +173,7 @@ async function mcpUninstallCommand(modules: string[]) {
   }
 
   log('Checking claude CLI...')
-  if (!(await checkClaude())) {
-    console.error('\n✗ claude CLI not found.\n')
-    process.exit(1)
-  }
+  await requireClaude()
 
   let ok = 0, fail = 0
   for (const name of modules) {
@@ -207,8 +181,5 @@ async function mcpUninstallCommand(modules: string[]) {
     if (await removeModule(name)) { log(`${name} ✓`); ok++ } else { fail++ }
   }
 
-  console.log()
-  if (ok > 0) console.log(`  ✓ Removed ${ok} MCP module${ok > 1 ? 's' : ''}`)
-  if (fail > 0) console.log(`  ✗ Failed: ${fail}`)
-  if (ok > 0) console.log(`\n  Restart Claude Code to apply.\n`)
+  printSummary(ok, fail, 'MCP module', 'Removed')
 }

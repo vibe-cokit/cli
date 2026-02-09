@@ -11,6 +11,7 @@ import {
   updateSettings,
   cleanup,
 } from '../utils/config'
+import { getErrorMsg } from '../utils/helpers'
 
 export async function initCommand() {
   const tmpDir = join(TEMP_DIR, crypto.randomUUID())
@@ -42,8 +43,7 @@ export async function initCommand() {
     console.log(`  Config:  ~/.claude/`)
     console.log(`  Claude:  ./CLAUDE.md\n`)
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    console.error(`\n✗ Init failed: ${msg}\n`)
+    console.error(`\n✗ Init failed: ${getErrorMsg(err)}\n`)
     process.exit(1)
   } finally {
     await cleanup(tmpDir)

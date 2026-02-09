@@ -1,6 +1,14 @@
+import { keys } from 'lodash-es'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { log } from '../utils/config'
+import {
+  getErrorMsg,
+  requireClaude,
+  printSummary,
+  listRegistry,
+  validateTargets,
+} from '../utils/helpers'
 
 const exec = promisify(execFile)
 
@@ -83,29 +91,12 @@ const PLUGINS: Record<string, PluginDef> = {
   },
 }
 
-function listPlugins() {
-  console.log('\nAvailable plugins:\n')
-  const maxName = Math.max(...Object.keys(PLUGINS).map(k => k.length))
-  for (const [key, plugin] of Object.entries(PLUGINS)) {
-    console.log(`  ${key.padEnd(maxName + 2)}${plugin.description}`)
-  }
-  console.log(`\nUsage:`)
-  console.log(`  vk plugin install <name> [name2 ...]`)
-  console.log(`  vk plugin install --all`)
-  console.log(`  vk plugin uninstall <name> [name2 ...]`)
-  console.log()
-}
-
-async function checkClaude(): Promise<boolean> {
-  try { await exec('claude', ['--version']); return true } catch { return false }
-}
-
 async function addPlugin(plugin: PluginDef): Promise<boolean> {
   const fullName = `${plugin.name}@${plugin.marketplace}`
   try {
     await exec('claude', ['plugin', 'install', fullName])
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMsg(err)
     if (!msg.includes('already installed')) {
       console.error(`  ✗ Failed to install ${plugin.name}: ${msg}`)
       return false
@@ -114,7 +105,7 @@ async function addPlugin(plugin: PluginDef): Promise<boolean> {
   try {
     await exec('claude', ['plugin', 'enable', fullName])
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMsg(err)
     if (!msg.includes('already enabled')) {
       console.error(`  ✗ Failed to enable ${plugin.name}: ${msg}`)
       return false
@@ -130,7 +121,7 @@ async function removePlugin(name: string): Promise<boolean> {
     await exec('claude', ['plugin', 'uninstall', fullName])
     return true
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMsg(err)
     if (msg.includes('not installed') || msg.includes('not found')) {
       console.log(`  ⚠ ${name} not installed, skipping`)
       return true
@@ -154,21 +145,20 @@ export async function pluginCommand(action: string | undefined, plugins: string[
 }
 
 async function pluginInstallCommand(modules: string[], options: { all?: boolean }) {
-  if (modules.length === 0 && !options.all) { listPlugins(); return }
+  if (modules.length === 0 && !options.all) {
+    listRegistry(PLUGINS, 'Available plugins:', [
+      'vk plugin install <name> [name2 ...]',
+      'vk plugin install --all',
+      'vk plugin uninstall <name> [name2 ...]',
+    ])
+    return
+  }
 
   log('Checking claude CLI...')
-  if (!(await checkClaude())) {
-    console.error('\n✗ claude CLI not found.\n')
-    process.exit(1)
-  }
+  await requireClaude()
 
-  const targets = options.all ? Object.keys(PLUGINS) : modules
-  const invalid = targets.filter(p => !PLUGINS[p])
-  if (invalid.length > 0) {
-    console.error(`\n✗ Unknown plugins: ${invalid.join(', ')}`)
-    console.error(`  Run 'vk plugin install' to see available plugins.\n`)
-    process.exit(1)
-  }
+  const targets = options.all ? keys(PLUGINS) : modules
+  validateTargets(targets, PLUGINS, 'plugins', 'vk plugin install')
 
   let ok = 0, fail = 0
   for (const name of targets) {
@@ -178,10 +168,7 @@ async function pluginInstallCommand(modules: string[], options: { all?: boolean 
     if (await addPlugin(plugin)) { log(`${plugin.name} ✓`); ok++ } else { fail++ }
   }
 
-  console.log()
-  if (ok > 0) console.log(`  ✓ Installed ${ok} plugin${ok > 1 ? 's' : ''}`)
-  if (fail > 0) console.log(`  ✗ Failed: ${fail}`)
-  if (ok > 0) console.log(`\n  Restart Claude Code to activate.\n`)
+  printSummary(ok, fail, 'plugin', 'Installed')
 }
 
 async function pluginUninstallCommand(modules: string[]) {
@@ -191,10 +178,7 @@ async function pluginUninstallCommand(modules: string[]) {
   }
 
   log('Checking claude CLI...')
-  if (!(await checkClaude())) {
-    console.error('\n✗ claude CLI not found.\n')
-    process.exit(1)
-  }
+  await requireClaude()
 
   let ok = 0, fail = 0
   for (const name of modules) {
@@ -202,8 +186,5 @@ async function pluginUninstallCommand(modules: string[]) {
     if (await removePlugin(name)) { log(`${name} ✓`); ok++ } else { fail++ }
   }
 
-  console.log()
-  if (ok > 0) console.log(`  ✓ Removed ${ok} plugin${ok > 1 ? 's' : ''}`)
-  if (fail > 0) console.log(`  ✗ Failed: ${fail}`)
-  if (ok > 0) console.log(`\n  Restart Claude Code to apply.\n`)
+  printSummary(ok, fail, 'plugin', 'Removed')
 }
