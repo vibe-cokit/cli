@@ -256,13 +256,13 @@ function generateBinaryFix(block: string, vars: VarMap): string {
   const counterMatch = block.match(/let ([\w$]+)=\(/)
   const counter = counterMatch?.[1] ?? 'XH'
 
-  // Compact fix: while loop + for-of (no let), no deleteTokenBefore
+  // Compact fix: while loop + for-of reusing counter var, no deleteTokenBefore
   let fix =
     `if(!FH.backspace&&!FH.delete&&${v.input}.includes("\\x7F")){` +
     `let ${counter}=(${v.input}.match(/\\x7f/g)||[]).length,` +
     `${v.state}=${v.curState};` +
     `while(${counter}--)${v.state}=${v.state}.backspace();` +
-    `for(c of ${v.input}.replace(/\\x7f/g,""))${v.state}=${v.state}.insert(c);` +
+    `for(${counter} of ${v.input}.replace(/\\x7f/g,""))${v.state}=${v.state}.insert(${counter});` +
     `if(!${v.curState}.equals(${v.state})){` +
     `if(${v.curState}.text!==${v.state}.text)` +
     `${v.updateText}(${v.state}.text);` +
