@@ -9,6 +9,7 @@ import {
   getSkillsVersion,
 } from '../utils/config'
 import { checkBinVersion, plural } from '../utils/helpers'
+import { checkKeyboardStatus } from '../utils/keyboard'
 
 export async function doctorCommand() {
   console.log('\nvibe-cokit doctor\n')
@@ -73,6 +74,21 @@ export async function doctorCommand() {
 
   console.log(`  Config version:  ${configVersion ? configVersion.slice(0, 10) : 'not installed'}`)
   console.log(`  Skills version:  ${skillsVersion ? skillsVersion.slice(0, 10) : 'not installed'}`)
+
+  // Check keyboard / Vietnamese IME fix
+  const kbStatus = await checkKeyboardStatus()
+  if (kbStatus.cliJsFound) {
+    if (kbStatus.isPatched) {
+      console.log(`  ✓ Vietnamese IME fix: applied`)
+    } else if (kbStatus.hasBug) {
+      console.log(`  ✗ Vietnamese IME fix: not applied — run \`vk doctor --fix\``)
+      issues++
+    } else {
+      console.log(`  ✓ Vietnamese IME: no bug detected`)
+    }
+  } else {
+    console.log(`  ⚠ Claude Code CLI: not found`)
+  }
 
   // Check CLAUDE.md in current project
   const claudeMdExists = await fileExists(join(process.cwd(), 'CLAUDE.md'))

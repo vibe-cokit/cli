@@ -22,6 +22,7 @@ import {
   cleanup,
 } from '../utils/config'
 import { getErrorMsg, plural } from '../utils/helpers'
+import { checkKeyboardStatus, patchCliJs } from '../utils/keyboard'
 
 export async function doctorFixCommand() {
   console.log('\nvibe-cokit doctor fix\n')
@@ -100,6 +101,32 @@ export async function doctorFixCommand() {
     }
   } else {
     log('Skills: OK')
+  }
+
+  // Check and fix keyboard / Vietnamese IME
+  const kbStatus = await checkKeyboardStatus()
+  if (kbStatus.cliJsFound && kbStatus.hasBug && !kbStatus.isPatched) {
+    log('Vietnamese IME fix missing — patching...')
+    try {
+      const result = await patchCliJs(kbStatus.cliJsPath!)
+      if (result.success) {
+        log(`Vietnamese IME fix applied`)
+        if (result.backupPath) {
+          log(`Backup: ${result.backupPath}`)
+        }
+        fixed++
+      } else {
+        console.error(`  ✗ Keyboard fix failed: ${result.message}`)
+      }
+    } catch (err) {
+      console.error(`  ✗ Keyboard fix failed: ${getErrorMsg(err)}`)
+    }
+  } else if (kbStatus.cliJsFound && kbStatus.isPatched) {
+    log('Vietnamese IME fix: OK')
+  } else if (kbStatus.cliJsFound && !kbStatus.hasBug) {
+    log('Vietnamese IME: no bug detected')
+  } else {
+    log('Claude Code CLI: not found (skip keyboard fix)')
   }
 
   console.log()
