@@ -50,7 +50,7 @@ export async function findCliJs(): Promise<string> {
       continue
     }
 
-    const found = await findCliJsRecursive(dir)
+    const found = await findCliJsRecursive(dir, 0, 5)
     if (found) return found
   }
 
@@ -60,22 +60,25 @@ export async function findCliJs(): Promise<string> {
   )
 }
 
-async function findCliJsRecursive(dir: string): Promise<string | null> {
+async function findCliJsRecursive(dir: string, depth: number, maxDepth: number): Promise<string | null> {
+  if (depth >= maxDepth) return null
   try {
     const entries = await readdir(dir, { withFileTypes: true })
     for (const entry of entries) {
+      if (!entry.isDirectory()) continue
       const fullPath = join(dir, entry.name)
-      if (entry.isDirectory()) {
-        if (entry.name === '@anthropic-ai') {
-          const cliJs = join(fullPath, 'claude-code', 'cli.js')
-          try {
-            const s = await stat(cliJs)
-            if (s.isFile()) return cliJs
-          } catch { /* not here */ }
-        }
-        const found = await findCliJsRecursive(fullPath)
-        if (found) return found
+      if (entry.name === '@anthropic-ai') {
+        const cliJs = join(fullPath, 'claude-code', 'cli.js')
+        try {
+          const s = await stat(cliJs)
+          if (s.isFile()) return cliJs
+        } catch { /* not here */ }
+        continue
       }
+      // Skip node_modules inside packages to avoid deep nesting
+      if (entry.name === 'node_modules' && depth > 0) continue
+      const found = await findCliJsRecursive(fullPath, depth + 1, maxDepth)
+      if (found) return found
     }
   } catch { /* permission denied etc */ }
   return null
