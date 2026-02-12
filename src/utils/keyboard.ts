@@ -11,6 +11,7 @@ export interface VarMap {
   curState: string
   updateText: string
   updateOffset: string
+  keyEvent?: string
 }
 
 export interface PatchResult {
@@ -255,10 +256,12 @@ function generateBinaryFix(block: string, vars: VarMap): string {
   // Extract counter var name from original block
   const counterMatch = block.match(/let ([\w$]+)=\(/)
   const counter = counterMatch?.[1] ?? 'XH'
+  // Use key event var extracted from block (e.g. EH from if(!EH.backspace...))
+  const ke = v.keyEvent ?? 'FH'
 
   // Compact fix: while loop + for-of reusing counter var, no deleteTokenBefore
   let fix =
-    `if(!FH.backspace&&!FH.delete&&${v.input}.includes("\\x7F")){` +
+    `if(!${ke}.backspace&&!${ke}.delete&&${v.input}.includes("\\x7F")){` +
     `let ${counter}=(${v.input}.match(/\\x7f/g)||[]).length,` +
     `${v.state}=${v.curState};` +
     `while(${counter}--)${v.state}=${v.state}.backspace();` +
@@ -380,6 +383,11 @@ export async function patchCliJs(filePath: string): Promise<PatchResult> {
 
 function extractBinaryVariables(block: string): VarMap {
   // In binary, \x7F is escaped text (4 chars), not literal DEL byte
+  // Extract key event variable from: if(!EH.backspace&&!EH.delete&&...
+  const m0 = block.match(/if\(!(\w+)\.backspace/)
+  if (!m0) throw new Error('Không trích xuất được biến key event (binary)')
+  const keyEvent = m0[1]!
+
   // Match: let XH=(s.match(/\x7f/g)||[]).length,WH=j;
   const m1 = block.match(
     /let ([\w$]+)=\(([\w$]+)\.match\(\/\\x7f\/g\)\|\|\[\]\)\.length,([\w$]+)=([\w$]+)[;,]/
@@ -403,6 +411,7 @@ function extractBinaryVariables(block: string): VarMap {
     curState,
     updateText: m2[1]!,
     updateOffset: m2[2]!,
+    keyEvent,
   }
 }
 
