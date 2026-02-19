@@ -30,6 +30,21 @@ export interface KeyboardStatus {
 
 type FileType = 'js' | 'binary'
 
+interface PatternMatch {
+  index: number
+  length: number
+}
+
+const BINARY_BUG_PATTERN_REGEXES: RegExp[] = [
+  /\.includes\(\s*["']\\x7[fF]["']\s*\)/g,
+  /\.includes\(\s*["']\\u007[fF]["']\s*\)/g,
+  /\.indexOf\(\s*["']\\x7[fF]["']\s*\)\s*(?:>=?\s*0|>\s*-1|!==?\s*-1)/g,
+  /\.indexOf\(\s*["']\\u007[fF]["']\s*\)\s*(?:>=?\s*0|>\s*-1|!==?\s*-1)/g,
+]
+
+const BINARY_UNPATCHED_MARKER = 'deleteToken' + 'Before'
+const BINARY_UNPATCHED_MARKER_RE = new RegExp(`\\b${BINARY_UNPATCHED_MARKER}\\b`)
+
 function detectFileType(filePath: string): FileType {
   // Native binary lives in ~/.local/share/claude/versions/
   if (filePath.includes('/claude/versions/') || filePath.includes('\\claude\\versions\\')) {
@@ -134,11 +149,100 @@ async function writeContent(filePath: string, content: string, fileType: FileTyp
 
 function getBugPattern(fileType: FileType): string {
   if (fileType === 'binary') {
-    // In binary, \x7F is stored as escaped 4-char text: \x7F
+    // Keep legacy pattern for generated fix and compatibility checks.
     return '.includes("\\x7F")'
   }
   // In cli.js, \x7f is literal DEL byte
   return `.includes("${DEL_CHAR}")`
+}
+
+function findNextBinaryPattern(content: string, from: number): PatternMatch | null {
+  let best: PatternMatch | null = null
+
+  for (const re of BINARY_BUG_PATTERN_REGEXES) {
+    re.lastIndex = from
+    const m = re.exec(content)
+    if (!m || m.index < 0) continue
+
+    const candidate: PatternMatch = { index: m.index, length: m[0].length }
+    if (!best || candidate.index < best.index) {
+      best = candidate
+    }
+  }
+
+  return best
+}
+
+function findEnclosingIfBlock(content: string, anchorIndex: number): { start: number; end: number } | null {
+  const lookback = 260
+  const searchStart = Math.max(0, anchorIndex - lookback)
+  const prefix = content.slice(searchStart, anchorIndex + 1)
+
+  let ifRelStart = -1
+  const ifRegex = /if\s*\(/g
+  let m: RegExpExecArray | null
+  while ((m = ifRegex.exec(prefix)) !== null) {
+    ifRelStart = m.index
+  }
+
+  if (ifRelStart === -1) return null
+
+  const blockStart = searchStart + ifRelStart
+  const firstBrace = content.indexOf('{', blockStart)
+  if (firstBrace === -1 || firstBrace < blockStart || firstBrace > anchorIndex + 220) {
+    return null
+  }
+
+  let depth = 0
+  const maxEnd = Math.min(content.length, blockStart + 1600)
+  for (let i = firstBrace; i < maxEnd; i++) {
+    const ch = content[i]
+    if (ch === '{') depth++
+    else if (ch === '}') {
+      depth--
+      if (depth === 0) return { start: blockStart, end: i + 1 }
+    }
+  }
+
+  return null
+}
+
+function isLikelyBinaryBugBlock(block: string): boolean {
+  const hasGuard = /if\s*\(\s*![\w$]+\.backspace\s*&&\s*![\w$]+\.delete\s*&&/.test(block)
+  const hasDeleteChars = /\.match\(\/\\x7[fF]\/g\)/.test(block)
+  const hasUpdateCalls = /[\w$]+\([\w$]+\.text\)\s*;\s*[\w$]+\([\w$]+\.offset\)/.test(block)
+
+  return hasGuard && hasDeleteChars && hasUpdateCalls
+}
+
+function scanBinaryBugBlocks(content: string): { patchableBlocks: number; patternMatches: number } {
+  let searchFrom = 0
+  let patchableBlocks = 0
+  let patternMatches = 0
+
+  while (true) {
+    const match = findNextBinaryPattern(content, searchFrom)
+    if (!match) break
+
+    patternMatches++
+    searchFrom = match.index + Math.max(match.length, 1)
+
+    const range = findEnclosingIfBlock(content, match.index)
+    if (!range) continue
+
+    const block = content.slice(range.start, range.end)
+    if (!isLikelyBinaryBugBlock(block)) continue
+    if (!BINARY_UNPATCHED_MARKER_RE.test(block)) continue
+
+    try {
+      extractBinaryVariables(block)
+      patchableBlocks++
+    } catch {
+      // Skip unknown/unsupported block shapes
+    }
+  }
+
+  return { patchableBlocks, patternMatches }
 }
 
 export async function isPatched(filePath: string): Promise<boolean> {
@@ -148,6 +252,35 @@ export async function isPatched(filePath: string): Promise<boolean> {
 }
 
 export function findBugBlock(content: string, fileType: FileType = 'js'): { start: number; end: number; block: string } {
+  if (fileType === 'binary') {
+    let searchFrom = 0
+
+    while (true) {
+      const match = findNextBinaryPattern(content, searchFrom)
+      if (!match) {
+        throw new Error(
+          'Không tìm thấy bug pattern của binary.\n' +
+          'Claude Code có thể đã được Anthropic fix hoặc đổi layout.'
+        )
+      }
+
+      searchFrom = match.index + Math.max(match.length, 1)
+      const range = findEnclosingIfBlock(content, match.index)
+      if (!range) continue
+
+      const block = content.slice(range.start, range.end)
+      if (!isLikelyBinaryBugBlock(block)) continue
+      if (!BINARY_UNPATCHED_MARKER_RE.test(block)) continue
+
+      try {
+        extractBinaryVariables(block)
+        return { start: range.start, end: range.end, block }
+      } catch {
+        continue
+      }
+    }
+  }
+
   const pattern = getBugPattern(fileType)
   let searchFrom = 0
 
@@ -161,42 +294,14 @@ export function findBugBlock(content: string, fileType: FileType = 'js'): { star
       )
     }
 
-    const searchStart = Math.max(0, idx - 150)
-    const blockStart = content.lastIndexOf('if(', idx)
-    if (blockStart === -1 || blockStart < searchStart) {
-      // Skip this occurrence — can't find enclosing if block
+    const range = findEnclosingIfBlock(content, idx)
+    if (!range) {
       searchFrom = idx + 1
       continue
     }
 
-    let depth = 0
-    let blockEnd = idx
-    const slice = content.slice(blockStart, blockStart + 800)
-    for (let i = 0; i < slice.length; i++) {
-      if (slice[i] === '{') depth++
-      else if (slice[i] === '}') {
-        depth--
-        if (depth === 0) {
-          blockEnd = blockStart + i + 1
-          break
-        }
-      }
-    }
-
-    if (depth !== 0) {
-      searchFrom = idx + 1
-      continue
-    }
-
-    const block = content.slice(blockStart, blockEnd)
-
-    // For binary: skip already-patched blocks (they don't contain deleteTokenBefore)
-    if (fileType === 'binary' && !block.includes('deleteTokenBefore')) {
-      searchFrom = idx + 1
-      continue
-    }
-
-    return { start: blockStart, end: blockEnd, block }
+    const block = content.slice(range.start, range.end)
+    return { start: range.start, end: range.end, block }
   }
 }
 
@@ -259,7 +364,7 @@ function generateBinaryFix(block: string, vars: VarMap): string {
   // Use key event var extracted from block (e.g. EH from if(!EH.backspace...))
   const ke = v.keyEvent ?? 'FH'
 
-  // Compact fix: while loop + for-of reusing counter var, no deleteTokenBefore
+  // Compact fix: while loop + for-of reusing counter var, no legacy delete-token helper
   let fix =
     `if(!${ke}.backspace&&!${ke}.delete&&${v.input}.includes("\\x7F")){` +
     `let ${counter}=(${v.input}.match(/\\x7f/g)||[]).length,` +
@@ -305,14 +410,13 @@ export async function patchCliJs(filePath: string): Promise<PatchResult> {
   await cp(filePath, backupPath)
 
   try {
-    const bugPattern = getBugPattern(fileType)
     let patched = content
 
     if (fileType === 'binary') {
+      const beforeScan = scanBinaryBugBlocks(content)
+
       // Binary may have multiple copies of the bug block — patch all
       let patchCount = 0
-      // findBugBlock for binary skips already-patched blocks,
-      // so we loop until it throws (no more unpatched blocks)
       while (patchCount < 10) {
         try {
           const { start, end, block } = findBugBlock(patched, fileType)
@@ -324,8 +428,12 @@ export async function patchCliJs(filePath: string): Promise<PatchResult> {
           break // No more unpatched bug blocks
         }
       }
+
       if (patchCount === 0) {
-        throw new Error('Không tìm thấy bug block')
+        if (beforeScan.patternMatches > 0) {
+          throw new Error('Phát hiện layout keyboard mới chưa được hỗ trợ patch')
+        }
+        throw new Error('Không tìm thấy bug block (Claude có thể đã fix upstream)')
       }
     } else {
       const { start, end, block } = findBugBlock(content, fileType)
@@ -344,20 +452,9 @@ export async function patchCliJs(filePath: string): Promise<PatchResult> {
     // Verify
     const verify = await readContent(filePath, fileType)
     if (fileType === 'binary') {
-      // Verify no unpatched bug blocks remain
-      // bugPattern (.includes("\\x7F")) still exists in the FIX code, so we can't
-      // just check its presence. Instead, check that no if-block containing
-      // bugPattern also contains deleteTokenBefore (which is the old buggy code).
-      let searchPos = 0
-      while (true) {
-        const pos = verify.indexOf(bugPattern, searchPos)
-        if (pos === -1) break
-        // Check surrounding ~300 chars for deleteTokenBefore
-        const vicinity = verify.slice(Math.max(0, pos - 100), pos + 300)
-        if (vicinity.includes('deleteTokenBefore')) {
-          throw new Error('Verify failed: unpatched bug block still present after binary patch')
-        }
-        searchPos = pos + 1
+      const afterScan = scanBinaryBugBlocks(verify)
+      if (afterScan.patchableBlocks > 0) {
+        throw new Error('Verify failed: unpatched bug block still present after binary patch')
       }
     } else {
       if (!verify.includes(PATCH_MARKER)) {
@@ -383,14 +480,14 @@ export async function patchCliJs(filePath: string): Promise<PatchResult> {
 
 function extractBinaryVariables(block: string): VarMap {
   // In binary, \x7F is escaped text (4 chars), not literal DEL byte
-  // Extract key event variable from: if(!EH.backspace&&!EH.delete&&...
-  const m0 = block.match(/if\(!(\w+)\.backspace/)
+  const m0 = block.match(/if\s*\(\s*!([\w$]+)\.backspace\s*&&\s*!([\w$]+)\.delete\s*&&/)
   if (!m0) throw new Error('Không trích xuất được biến key event (binary)')
   const keyEvent = m0[1]!
 
-  // Match: let XH=(s.match(/\x7f/g)||[]).length,WH=j;
+  // Match legacy/new layouts:
+  // let|const XH=(s.match(/\x7f/g)||[]).length,WH=j;
   const m1 = block.match(
-    /let ([\w$]+)=\(([\w$]+)\.match\(\/\\x7f\/g\)\|\|\[\]\)\.length,([\w$]+)=([\w$]+)[;,]/
+    /(?:let|const)\s+([\w$]+)\s*=\s*\(([\w$]+)\.match\(\/\\x7[fF]\/g\)\|\|\[\]\)\.length\s*[,;]\s*([\w$]+)\s*=\s*([\w$]+)[;,]/
   )
   if (!m1) throw new Error('Không trích xuất được biến count/state (binary)')
 
@@ -398,12 +495,15 @@ function extractBinaryVariables(block: string): VarMap {
   const state = m1[3]!
   const curState = m1[4]!
 
-  // Match: $(WH.text);z(WH.offset)
   const stateEsc = state.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const m2 = block.match(
-    new RegExp(`([\\w$]+)\\(${stateEsc}\\.text\\);([\\w$]+)\\(${stateEsc}\\.offset\\)`)
+    new RegExp(`([\\w$]+)\\(${stateEsc}\\.text\\)\\s*;\\s*([\\w$]+)\\(${stateEsc}\\.offset\\)`)
   )
   if (!m2) throw new Error('Không trích xuất được update functions (binary)')
+
+  if (!block.includes(`${state}.text`) || !block.includes(`${state}.offset`)) {
+    throw new Error('Block binary không hợp lệ: thiếu state usage')
+  }
 
   return {
     input,
@@ -449,30 +549,16 @@ export async function checkKeyboardStatus(): Promise<KeyboardStatus> {
     const cliJsPath = await findCliJs()
     const fileType = detectFileType(cliJsPath)
     const content = await readContent(cliJsPath, fileType)
-    const bugPattern = getBugPattern(fileType)
 
     let patched: boolean
     let hasBug: boolean
 
     if (fileType === 'binary') {
-      // Check if any occurrence of bugPattern is near deleteTokenBefore
-      // If yes → unpatched bug block exists. If no → already patched (or no bug).
-      let hasUnpatchedBlock = false
-      let searchPos = 0
-      while (true) {
-        const pos = content.indexOf(bugPattern, searchPos)
-        if (pos === -1) break
-        const vicinity = content.slice(Math.max(0, pos - 100), pos + 300)
-        if (vicinity.includes('deleteTokenBefore')) {
-          hasUnpatchedBlock = true
-          break
-        }
-        searchPos = pos + 1
-      }
-      hasBug = hasUnpatchedBlock
-      // Patched if bugPattern exists (in fix code) but no unpatched blocks remain
-      patched = content.includes(bugPattern) && !hasUnpatchedBlock
+      const scan = scanBinaryBugBlocks(content)
+      hasBug = scan.patchableBlocks > 0
+      patched = !hasBug && scan.patternMatches > 0
     } else {
+      const bugPattern = getBugPattern(fileType)
       patched = content.includes(PATCH_MARKER)
       hasBug = content.includes(bugPattern) && !patched
     }
