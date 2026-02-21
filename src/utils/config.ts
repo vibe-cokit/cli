@@ -13,6 +13,7 @@ export const ANTIGRAVITY_REPO = 'vibe-cokit/antigravity'
 export const SKILLS_REPO = 'vibe-cokit/skills'
 export const CLAUDE_DIR = join(homedir(), '.claude')
 export const CLAUDE_SKILLS_DIR = join(CLAUDE_DIR, 'skills')
+export const ANTIGRAVITY_SKILLS_DIR = join(homedir(), '.gemini', 'antigravity', 'skills')
 export const CONFIG_FOLDERS = ['agents', 'commands', 'hooks', 'prompts', 'workflows'] as const
 export const TEMP_DIR = join(homedir(), '.vibe-cokit-tmp')
 const SETTINGS_PATH = join(CLAUDE_DIR, 'settings.json')

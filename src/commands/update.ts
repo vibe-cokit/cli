@@ -4,6 +4,7 @@ import { promisify } from 'util'
 import {
   SKILLS_REPO,
   ANTIGRAVITY_REPO,
+  ANTIGRAVITY_SKILLS_DIR,
   CLAUDE_SKILLS_DIR,
   TEMP_DIR,
   log,
@@ -32,25 +33,16 @@ const VALID_AGENTS = ['claude-code', 'antigravity'] as const
 type AgentType = (typeof VALID_AGENTS)[number]
 
 export async function updateCommand(agent?: string, ref?: string) {
-  if (!agent) {
-    console.error('\n✗ Missing agent type.')
-    console.error(`  Usage: vk update <agent> [ref]`)
-    console.error(`  Available agents: ${VALID_AGENTS.join(', ')}\n`)
-    process.exit(1)
-  }
+  const agentType = agent as AgentType | undefined
 
-  const agentType = agent as AgentType
-  if (!VALID_AGENTS.includes(agentType)) {
+  if (agentType && !VALID_AGENTS.includes(agentType)) {
     console.error(`\n✗ Unknown agent type: "${agent}"`)
     console.error(`  Available agents: ${VALID_AGENTS.join(', ')}\n`)
     process.exit(1)
   }
 
   try {
-    console.log(`\nvibe-cokit update (${agentType})\n`)
-
-    log('Verifying prerequisites...')
-    await verifyPrerequisites()
+    console.log(`\nvibe-cokit update${agentType ? ` (${agentType})` : ''}\n`)
 
     // 1. Upgrade CLI binary
     log('Checking CLI version...')
@@ -65,15 +57,20 @@ export async function updateCommand(agent?: string, ref?: string) {
       log('CLI upgrade skipped (npm registry unavailable)')
     }
 
-    // 2. Agent-specific updates
-    switch (agentType) {
-      case 'claude-code':
-        await updateClaudeCode(ref)
-        break
-      case 'antigravity':
-        await updateAntigravity(ref)
-        await updateSkills(ref, join(process.cwd(), '.agent', 'skills'))
-        break
+    // 2. Agent-specific updates (only if agent is specified)
+    if (agentType) {
+      log('Verifying prerequisites...')
+      await verifyPrerequisites()
+
+      switch (agentType) {
+        case 'claude-code':
+          await updateClaudeCode(ref)
+          break
+        case 'antigravity':
+          await updateAntigravity(ref)
+          await updateSkills(ref, ANTIGRAVITY_SKILLS_DIR)
+          break
+      }
     }
 
     console.log('\n✓ vibe-cokit update complete!\n')
