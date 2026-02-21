@@ -12,6 +12,7 @@ import {
   copyConfigFolders,
   copySkillFolders,
   copyAgentFolder,
+  dirExists,
   getCommitSha,
   updateSettings,
   updateSkillsVersion,
@@ -137,7 +138,10 @@ async function updateSkills(ref?: string, destDir?: string) {
     log('Fetching latest skills version...')
     const targetSha = await getRemoteSha(ref, SKILLS_REPO)
 
-    if (currentSha && currentSha === targetSha) {
+    const target = destDir ?? CLAUDE_SKILLS_DIR
+    const destExists = await dirExists(target)
+
+    if (currentSha && currentSha === targetSha && destExists) {
       log(`Skills: up-to-date (${currentSha.slice(0, 8)})`)
       return
     }
@@ -150,7 +154,6 @@ async function updateSkills(ref?: string, destDir?: string) {
       await exec('git', ['-C', tmpDir, 'checkout', ref])
     }
 
-    const target = destDir ?? CLAUDE_SKILLS_DIR
     log(`Updating skills in ${target}/`)
     await copySkillFolders(tmpDir, target)
 
