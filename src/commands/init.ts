@@ -95,14 +95,15 @@ async function initAntigravity() {
       log('Cloning skills repository...')
       await cloneRepo(skillsTmpDir, SKILLS_REPO)
 
-      log('Installing skills to .agents/skills/...')
-      await copySkillFolders(skillsTmpDir, join(process.cwd(), '.agents', 'skills'))
+      log('Installing skills to .agent/skills/...')
+      await copySkillFolders(skillsTmpDir, join(process.cwd(), '.agent', 'skills'))
     } finally {
       await cleanup(skillsTmpDir)
     }
 
     log('Updating .gitignore...')
     await ensureGitignore('.agents')
+    await ensureGitignore('.agent')
 
     log('Updating version tracking...')
     const sha = await getCommitSha(tmpDir)

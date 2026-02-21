@@ -72,7 +72,7 @@ export async function updateCommand(agent?: string, ref?: string) {
         break
       case 'antigravity':
         await updateAntigravity(ref)
-        await updateSkills(ref, join(process.cwd(), '.agents', 'skills'))
+        await updateSkills(ref, join(process.cwd(), '.agent', 'skills'))
         break
     }
 
