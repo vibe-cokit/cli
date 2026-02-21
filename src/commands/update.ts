@@ -14,9 +14,11 @@ import {
   getCommitSha,
   updateSettings,
   updateSkillsVersion,
+  updateAntigravityVersion,
   cleanup,
   getCurrentVersion,
   getSkillsVersion,
+  getAntigravityVersion,
   getRemoteSha,
   upgradeCli,
 } from '../utils/config'
@@ -68,6 +70,7 @@ export async function updateCommand(agent?: string, ref?: string) {
         break
       case 'antigravity':
         await updateAntigravity(ref)
+        await updateSkills(ref)
         break
     }
 
@@ -163,8 +166,16 @@ async function updateAntigravity(ref?: string) {
   const tmpDir = join(TEMP_DIR, crypto.randomUUID())
 
   try {
+    log('Checking antigravity version...')
+    const currentSha = await getAntigravityVersion()
+
     log('Fetching latest antigravity version...')
     const targetSha = await getRemoteSha(ref, ANTIGRAVITY_REPO)
+
+    if (currentSha && currentSha === targetSha) {
+      log(`Antigravity: up-to-date (${currentSha.slice(0, 8)})`)
+      return
+    }
 
     log('Cloning antigravity repository...')
     await cloneRepo(tmpDir, ANTIGRAVITY_REPO)
@@ -178,7 +189,10 @@ async function updateAntigravity(ref?: string) {
     await copyAgentFolder(tmpDir)
 
     const sha = await getCommitSha(tmpDir)
-    log(`Antigravity updated → ${sha.slice(0, 8)}`)
+    await updateAntigravityVersion(sha)
+
+    const from = currentSha ? currentSha.slice(0, 8) : 'none'
+    log(`Antigravity updated: ${from} → ${sha.slice(0, 8)}`)
   } finally {
     await cleanup(tmpDir)
   }

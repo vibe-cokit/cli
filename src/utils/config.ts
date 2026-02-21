@@ -151,6 +151,17 @@ export async function getSkillsVersion(): Promise<string | null> {
   return get(settings, 'skillsVersion', null) as string | null
 }
 
+export async function updateAntigravityVersion(commitSha: string) {
+  const settings = await readSettings()
+  settings.antigravityVersion = commitSha
+  await writeSettings(settings)
+}
+
+export async function getAntigravityVersion(): Promise<string | null> {
+  const settings = await readSettings()
+  return get(settings, 'antigravityVersion', null) as string | null
+}
+
 export async function upgradeCli(): Promise<{ upgraded: boolean; from: string; to: string }> {
   // Get currently installed version from bun global packages
   const { stdout: installedRaw } = await exec('bun', ['pm', 'ls', '-g'])
