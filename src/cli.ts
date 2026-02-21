@@ -24,7 +24,7 @@ cli
   .action((agent?: string) => initCommand(agent))
 
 cli
-  .command('update <agent> [ref]', 'Update agent config to latest (claude-code | antigravity)')
+  .command('update [agent] [ref]', 'Update agent config to latest (claude-code | antigravity)')
   .alias('upgrade')
   .action((agent: string, ref?: string) => updateCommand(agent, ref))
 

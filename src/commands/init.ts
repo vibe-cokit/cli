@@ -85,11 +85,11 @@ async function initAntigravity() {
     log('Cloning antigravity configuration...')
     await cloneRepo(tmpDir, ANTIGRAVITY_REPO)
 
-    log('Copying agent config to .agent/...')
+    log('Copying agent config to .agents/...')
     await copyAgentFolder(tmpDir)
 
     log('Updating .gitignore...')
-    await ensureGitignore('.agent')
+    await ensureGitignore('.agents')
 
     log('Updating version tracking...')
     const sha = await getCommitSha(tmpDir)
@@ -97,7 +97,7 @@ async function initAntigravity() {
 
     console.log('\n✓ Antigravity initialized successfully!')
     console.log(`  Version: ${sha.slice(0, 8)}`)
-    console.log(`  Agent:   ./.agent/\n`)
+    console.log(`  Agent:   ./.agents/\n`)
   } catch (err) {
     console.error(`\n✗ Init failed: ${getErrorMsg(err)}\n`)
     process.exit(1)

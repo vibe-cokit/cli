@@ -185,7 +185,7 @@ async function updateAntigravity(ref?: string) {
       await exec('git', ['-C', tmpDir, 'checkout', ref])
     }
 
-    log('Updating .agent/ folder...')
+    log('Updating .agents/ folder...')
     await copyAgentFolder(tmpDir)
 
     const sha = await getCommitSha(tmpDir)

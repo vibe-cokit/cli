@@ -181,7 +181,7 @@ export async function upgradeCli(): Promise<{ upgraded: boolean; from: string; t
 }
 
 export async function copyAgentFolder(srcDir: string) {
-  const dest = join(process.cwd(), '.agent')
+  const dest = join(process.cwd(), '.agents')
   await mkdir(dest, { recursive: true })
 
   const entries = await readdir(srcDir, { withFileTypes: true })
