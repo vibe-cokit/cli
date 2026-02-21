@@ -4,6 +4,7 @@ import { promisify } from 'util'
 import {
   SKILLS_REPO,
   ANTIGRAVITY_REPO,
+  CLAUDE_SKILLS_DIR,
   TEMP_DIR,
   log,
   verifyPrerequisites,
@@ -70,7 +71,7 @@ export async function updateCommand(agent?: string, ref?: string) {
         break
       case 'antigravity':
         await updateAntigravity(ref)
-        await updateSkills(ref)
+        await updateSkills(ref, join(process.cwd(), '.agents', 'skills'))
         break
     }
 
@@ -126,7 +127,7 @@ async function updateConfig(ref?: string) {
   }
 }
 
-async function updateSkills(ref?: string) {
+async function updateSkills(ref?: string, destDir?: string) {
   const tmpDir = join(TEMP_DIR, crypto.randomUUID())
 
   try {
@@ -149,8 +150,9 @@ async function updateSkills(ref?: string) {
       await exec('git', ['-C', tmpDir, 'checkout', ref])
     }
 
-    log('Updating skills in ~/.claude/skills/')
-    await copySkillFolders(tmpDir)
+    const target = destDir ?? CLAUDE_SKILLS_DIR
+    log(`Updating skills in ${target}/`)
+    await copySkillFolders(tmpDir, target)
 
     const sha = await getCommitSha(tmpDir)
     await updateSkillsVersion(sha)

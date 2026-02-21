@@ -1,7 +1,7 @@
 import { join } from 'path'
 import {
   CLAUDE_DIR,
-  SKILLS_DIR,
+  CLAUDE_SKILLS_DIR,
   CONFIG_FOLDERS,
   dirExists,
   fileExists,
@@ -50,7 +50,7 @@ export async function doctorCommand() {
   }
 
   // Check skills directory
-  if (await dirExists(SKILLS_DIR)) {
+  if (await dirExists(CLAUDE_SKILLS_DIR)) {
     console.log(`  ✓ ~/.claude/skills/`)
   } else {
     console.log(`  ✗ ~/.claude/skills/ missing — run \`vk skills\``)

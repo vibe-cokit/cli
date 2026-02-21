@@ -2,7 +2,7 @@ import { join } from 'path'
 import { some } from 'lodash-es'
 import {
   CLAUDE_DIR,
-  SKILLS_DIR,
+  CLAUDE_SKILLS_DIR,
   CONFIG_FOLDERS,
   TEMP_DIR,
   SKILLS_REPO,
@@ -82,7 +82,7 @@ export async function doctorFixCommand() {
   }
 
   // Check if skills are missing
-  const skillsMissing = !(await dirExists(SKILLS_DIR)) || !(await getSkillsVersion())
+  const skillsMissing = !(await dirExists(CLAUDE_SKILLS_DIR)) || !(await getSkillsVersion())
 
   if (skillsMissing) {
     log('Skills missing — installing...')

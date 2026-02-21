@@ -2,11 +2,13 @@ import { join } from 'path'
 import {
   TEMP_DIR,
   ANTIGRAVITY_REPO,
+  SKILLS_REPO,
   log,
   verifyPrerequisites,
   cloneRepo,
   copyConfigFolders,
   copyClaudeMd,
+  copySkillFolders,
   runClaudeInit,
   getCommitSha,
   updateSettings,
@@ -87,6 +89,17 @@ async function initAntigravity() {
 
     log('Copying agent config to .agents/...')
     await copyAgentFolder(tmpDir)
+
+    const skillsTmpDir = join(TEMP_DIR, crypto.randomUUID())
+    try {
+      log('Cloning skills repository...')
+      await cloneRepo(skillsTmpDir, SKILLS_REPO)
+
+      log('Installing skills to .agents/skills/...')
+      await copySkillFolders(skillsTmpDir, join(process.cwd(), '.agents', 'skills'))
+    } finally {
+      await cleanup(skillsTmpDir)
+    }
 
     log('Updating .gitignore...')
     await ensureGitignore('.agents')

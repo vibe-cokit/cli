@@ -12,7 +12,7 @@ export const REPO = 'vibe-cokit/claude-code'
 export const ANTIGRAVITY_REPO = 'vibe-cokit/antigravity'
 export const SKILLS_REPO = 'vibe-cokit/skills'
 export const CLAUDE_DIR = join(homedir(), '.claude')
-export const SKILLS_DIR = join(CLAUDE_DIR, 'skills')
+export const CLAUDE_SKILLS_DIR = join(CLAUDE_DIR, 'skills')
 export const CONFIG_FOLDERS = ['agents', 'commands', 'hooks', 'prompts', 'workflows'] as const
 export const TEMP_DIR = join(homedir(), '.vibe-cokit-tmp')
 const SETTINGS_PATH = join(CLAUDE_DIR, 'settings.json')
@@ -127,13 +127,13 @@ export async function getRemoteSha(ref?: string, repo: string = REPO): Promise<s
   return sha
 }
 
-export async function copySkillFolders(srcDir: string) {
-  await mkdir(SKILLS_DIR, { recursive: true })
+export async function copySkillFolders(srcDir: string, destDir: string = CLAUDE_SKILLS_DIR) {
+  await mkdir(destDir, { recursive: true })
   const entries = await readdir(srcDir, { withFileTypes: true })
   for (const entry of entries) {
     if (entry.isDirectory() && !entry.name.startsWith('.')) {
       const src = join(srcDir, entry.name)
-      const dest = join(SKILLS_DIR, entry.name)
+      const dest = join(destDir, entry.name)
       await cp(src, dest, { recursive: true, force: true })
       log(`Copied skill: ${entry.name}/`)
     }
