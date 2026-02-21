@@ -1,6 +1,6 @@
 import { homedir } from 'os'
 import { join } from 'path'
-import { mkdir, cp, rm, stat, readdir } from 'fs/promises'
+import { mkdir, cp, rm, stat, readdir, readFile, writeFile, appendFile } from 'fs/promises'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { get } from 'lodash-es'
@@ -9,6 +9,7 @@ import { getErrorMsg } from './helpers'
 const exec = promisify(execFile)
 
 export const REPO = 'vibe-cokit/claude-code'
+export const ANTIGRAVITY_REPO = 'vibe-cokit/antigravity'
 export const SKILLS_REPO = 'vibe-cokit/skills'
 export const CLAUDE_DIR = join(homedir(), '.claude')
 export const SKILLS_DIR = join(CLAUDE_DIR, 'skills')
@@ -166,4 +167,31 @@ export async function upgradeCli(): Promise<{ upgraded: boolean; from: string; t
 
   await exec('bun', ['install', '-g', `vibe-cokit@${latestVersion}`])
   return { upgraded: true, from: currentVersion, to: latestVersion }
+}
+
+export async function copyAgentFolder(srcDir: string) {
+  const dest = join(process.cwd(), '.agent')
+  await mkdir(dest, { recursive: true })
+
+  const entries = await readdir(srcDir, { withFileTypes: true })
+  for (const entry of entries) {
+    if (entry.name.startsWith('.git')) continue
+    const src = join(srcDir, entry.name)
+    const target = join(dest, entry.name)
+    await cp(src, target, { recursive: true, force: true })
+  }
+}
+
+export async function ensureGitignore(entry: string) {
+  const gitignorePath = join(process.cwd(), '.gitignore')
+
+  try {
+    const content = await readFile(gitignorePath, 'utf-8')
+    const lines = content.split(/\r?\n/)
+    if (lines.some(line => line.trim() === entry)) return
+    const separator = content.endsWith('\n') ? '' : '\n'
+    await appendFile(gitignorePath, `${separator}${entry}\n`)
+  } catch {
+    await writeFile(gitignorePath, `${entry}\n`)
+  }
 }

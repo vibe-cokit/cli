@@ -20,13 +20,13 @@ cli
   })
 
 cli
-  .command('init', 'Initialize vibe-cokit for current project')
-  .action(initCommand)
+  .command('init [agent]', 'Initialize vibe-cokit (claude-code | antigravity)')
+  .action((agent?: string) => initCommand(agent))
 
 cli
-  .command('update [ref]', 'Update CLI, config, and skills to latest')
+  .command('update <agent> [ref]', 'Update agent config to latest (claude-code | antigravity)')
   .alias('upgrade')
-  .action(updateCommand)
+  .action((agent: string, ref?: string) => updateCommand(agent, ref))
 
 cli
   .command('skills [ref]', 'Install or update skills from vibe-cokit')

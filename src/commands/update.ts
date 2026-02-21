@@ -3,12 +3,14 @@ import { execFile } from 'child_process'
 import { promisify } from 'util'
 import {
   SKILLS_REPO,
+  ANTIGRAVITY_REPO,
   TEMP_DIR,
   log,
   verifyPrerequisites,
   cloneRepo,
   copyConfigFolders,
   copySkillFolders,
+  copyAgentFolder,
   getCommitSha,
   updateSettings,
   updateSkillsVersion,
@@ -22,9 +24,26 @@ import { getErrorMsg } from '../utils/helpers'
 
 const exec = promisify(execFile)
 
-export async function updateCommand(ref?: string) {
+const VALID_AGENTS = ['claude-code', 'antigravity'] as const
+type AgentType = (typeof VALID_AGENTS)[number]
+
+export async function updateCommand(agent?: string, ref?: string) {
+  if (!agent) {
+    console.error('\n✗ Missing agent type.')
+    console.error(`  Usage: vk update <agent> [ref]`)
+    console.error(`  Available agents: ${VALID_AGENTS.join(', ')}\n`)
+    process.exit(1)
+  }
+
+  const agentType = agent as AgentType
+  if (!VALID_AGENTS.includes(agentType)) {
+    console.error(`\n✗ Unknown agent type: "${agent}"`)
+    console.error(`  Available agents: ${VALID_AGENTS.join(', ')}\n`)
+    process.exit(1)
+  }
+
   try {
-    console.log('\nvibe-cokit update\n')
+    console.log(`\nvibe-cokit update (${agentType})\n`)
 
     log('Verifying prerequisites...')
     await verifyPrerequisites()
@@ -42,11 +61,15 @@ export async function updateCommand(ref?: string) {
       log('CLI upgrade skipped (npm registry unavailable)')
     }
 
-    // 2. Update config
-    await updateConfig(ref)
-
-    // 3. Update skills
-    await updateSkills(ref)
+    // 2. Agent-specific updates
+    switch (agentType) {
+      case 'claude-code':
+        await updateClaudeCode(ref)
+        break
+      case 'antigravity':
+        await updateAntigravity(ref)
+        break
+    }
 
     console.log('\n✓ vibe-cokit update complete!\n')
   } catch (err) {
@@ -54,6 +77,14 @@ export async function updateCommand(ref?: string) {
     console.error(`\n✗ Update failed: ${msg}\n`)
     process.exit(1)
   }
+}
+
+async function updateClaudeCode(ref?: string) {
+  // Update config
+  await updateConfig(ref)
+
+  // Update skills
+  await updateSkills(ref)
 }
 
 async function updateConfig(ref?: string) {
@@ -123,6 +154,31 @@ async function updateSkills(ref?: string) {
 
     const from = currentSha ? currentSha.slice(0, 8) : 'none'
     log(`Skills updated: ${from} → ${sha.slice(0, 8)}`)
+  } finally {
+    await cleanup(tmpDir)
+  }
+}
+
+async function updateAntigravity(ref?: string) {
+  const tmpDir = join(TEMP_DIR, crypto.randomUUID())
+
+  try {
+    log('Fetching latest antigravity version...')
+    const targetSha = await getRemoteSha(ref, ANTIGRAVITY_REPO)
+
+    log('Cloning antigravity repository...')
+    await cloneRepo(tmpDir, ANTIGRAVITY_REPO)
+
+    if (ref) {
+      log(`Checking out ${ref}...`)
+      await exec('git', ['-C', tmpDir, 'checkout', ref])
+    }
+
+    log('Updating .agent/ folder...')
+    await copyAgentFolder(tmpDir)
+
+    const sha = await getCommitSha(tmpDir)
+    log(`Antigravity updated → ${sha.slice(0, 8)}`)
   } finally {
     await cleanup(tmpDir)
   }
