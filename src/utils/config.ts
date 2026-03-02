@@ -192,7 +192,7 @@ export async function upgradeCli(): Promise<{ upgraded: boolean; from: string; t
     // ignore — cache dir may not exist
   }
 
-  await exec('bun', ['install', '-g', `vibe-cokit@${latestVersion}`])
+  await exec('bun', ['install', '-g', '--registry', 'https://registry.npmjs.org', `vibe-cokit@${latestVersion}`])
   return { upgraded: true, from: currentVersion, to: latestVersion }
 }
 
