@@ -169,9 +169,11 @@ export async function upgradeCli(): Promise<{ upgraded: boolean; from: string; t
   const match = installedRaw.match(/vibe-cokit@(\S+)/)
   const currentVersion = match?.[1] ?? '0.0.0'
 
-  // Get latest version from npm registry
-  const { stdout: latestRaw } = await exec('npm', ['view', 'vibe-cokit', 'version'])
-  const latestVersion = latestRaw.trim()
+  // Get latest version from npm registry (direct fetch, no npm CLI needed)
+  const res = await fetch('https://registry.npmjs.org/vibe-cokit/latest')
+  if (!res.ok) throw new Error(`npm registry returned ${res.status}`)
+  const data = (await res.json()) as { version: string }
+  const latestVersion = data.version
 
   if (currentVersion === latestVersion) {
     return { upgraded: false, from: currentVersion, to: latestVersion }
