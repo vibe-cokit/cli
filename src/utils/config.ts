@@ -184,6 +184,14 @@ export async function upgradeCli(): Promise<{ upgraded: boolean; from: string; t
     return { upgraded: false, from: currentVersion, to: latestVersion }
   }
 
+  // Clear bun's registry cache to avoid stale metadata (bun caches npm registry
+  // responses aggressively, so a newly published version may not resolve).
+  try {
+    await exec('rm', ['-rf', join(homedir(), '.bun', 'install', 'cache')])
+  } catch {
+    // ignore — cache dir may not exist
+  }
+
   await exec('bun', ['install', '-g', `vibe-cokit@${latestVersion}`])
   return { upgraded: true, from: currentVersion, to: latestVersion }
 }
