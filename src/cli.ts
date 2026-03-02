@@ -10,6 +10,7 @@ import { doctorCommand } from './commands/doctor'
 import { doctorFixCommand } from './commands/doctor-fix'
 import { mcpCommand } from './commands/mcp'
 import { pluginCommand } from './commands/plugin'
+import { toolsCommand } from './commands/tools'
 
 const cli = cac('vibe-cokit')
 
@@ -60,6 +61,12 @@ cli
   .option('--all', 'Apply to all available plugins')
   .action((action: string | undefined, plugins: string[], options: { all?: boolean }) => {
     return pluginCommand(action, plugins, options)
+  })
+
+cli
+  .command('tools [action] [...args]', 'Developer utilities (kill-port, etc.)')
+  .action((action: string | undefined, args: string[]) => {
+    return toolsCommand(action, args)
   })
 
 cli.help()
