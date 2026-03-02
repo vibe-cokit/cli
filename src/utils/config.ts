@@ -93,7 +93,12 @@ export async function getCommitSha(tmpDir: string): Promise<string> {
 
 async function readSettings(): Promise<Record<string, unknown>> {
   const file = Bun.file(SETTINGS_PATH)
-  if (await file.exists()) return file.json()
+  if (await file.exists()) {
+    const text = await file.text()
+    // Strip single-line comments (// ...) to support JSONC format
+    const stripped = text.replace(/^\s*\/\/.*$/gm, '').replace(/,(\s*[}\]])/g, '$1')
+    return JSON.parse(stripped)
+  }
   return {}
 }
 
