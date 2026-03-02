@@ -25,7 +25,7 @@ import {
   getRemoteSha,
   upgradeCli,
 } from '../utils/config'
-import { getErrorMsg } from '../utils/helpers'
+import { getErrorMsg, logError } from '../utils/helpers'
 
 const exec = promisify(execFile)
 
@@ -53,8 +53,10 @@ export async function updateCommand(agent?: string, ref?: string) {
       } else {
         log(`CLI: v${from} (latest)`)
       }
-    } catch {
-      log('CLI upgrade skipped (npm registry unavailable)')
+    } catch (err) {
+      const reason = getErrorMsg(err)
+      logError('update:cli', err)
+      log(`CLI upgrade skipped: ${reason}`)
     }
 
     // 2. Agent-specific updates (only if agent is specified)
@@ -75,6 +77,7 @@ export async function updateCommand(agent?: string, ref?: string) {
 
     console.log('\n✓ vibe-cokit update complete!\n')
   } catch (err) {
+    logError('update', err)
     const msg = getErrorMsg(err)
     console.error(`\n✗ Update failed: ${msg}\n`)
     process.exit(1)

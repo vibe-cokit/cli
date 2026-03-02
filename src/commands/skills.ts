@@ -14,7 +14,7 @@ import {
   getRemoteSha,
   cleanup,
 } from '../utils/config'
-import { getErrorMsg } from '../utils/helpers'
+import { getErrorMsg, logError } from '../utils/helpers'
 
 const exec = promisify(execFile)
 
@@ -59,6 +59,7 @@ export async function skillsCommand(ref?: string) {
     console.log(`  To:      ${sha.slice(0, 8)}`)
     console.log(`  Skills:  ~/.claude/skills/\n`)
   } catch (err) {
+    logError('skills', err)
     console.error(`\n✗ Skills setup failed: ${getErrorMsg(err)}\n`)
     process.exit(1)
   } finally {

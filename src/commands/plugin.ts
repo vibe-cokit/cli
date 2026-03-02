@@ -4,6 +4,7 @@ import { promisify } from 'util'
 import { log } from '../utils/config'
 import {
   getErrorMsg,
+  logError,
   requireClaude,
   printSummary,
   listRegistry,
@@ -98,6 +99,7 @@ async function addPlugin(plugin: PluginDef): Promise<boolean> {
   } catch (err) {
     const msg = getErrorMsg(err)
     if (!msg.includes('already installed')) {
+      logError('plugin', err)
       console.error(`  ✗ Failed to install ${plugin.name}: ${msg}`)
       return false
     }
@@ -107,6 +109,7 @@ async function addPlugin(plugin: PluginDef): Promise<boolean> {
   } catch (err) {
     const msg = getErrorMsg(err)
     if (!msg.includes('already enabled')) {
+      logError('plugin', err)
       console.error(`  ✗ Failed to enable ${plugin.name}: ${msg}`)
       return false
     }
@@ -126,6 +129,7 @@ async function removePlugin(name: string): Promise<boolean> {
       console.log(`  ⚠ ${name} not installed, skipping`)
       return true
     }
+    logError('plugin', err)
     console.error(`  ✗ Failed to uninstall ${name}: ${msg}`)
     return false
   }

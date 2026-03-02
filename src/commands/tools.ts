@@ -1,5 +1,5 @@
 import killPort from 'kill-port'
-import { getErrorMsg } from '../utils/helpers'
+import { getErrorMsg, logError } from '../utils/helpers'
 
 async function handleKillPort(port: number) {
     try {
@@ -11,6 +11,7 @@ async function handleKillPort(port: number) {
         if (msg.toLowerCase().includes('no process')) {
             console.log(`\n✓ No process running on port ${port}\n`)
         } else {
+            logError('tools', err)
             console.error(`\n✗ Failed to kill port ${port}: ${msg}\n`)
             process.exit(1)
         }

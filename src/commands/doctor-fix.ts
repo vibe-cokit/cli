@@ -21,7 +21,7 @@ import {
   getSkillsVersion,
   cleanup,
 } from '../utils/config'
-import { getErrorMsg, plural } from '../utils/helpers'
+import { getErrorMsg, logError, plural } from '../utils/helpers'
 import { checkKeyboardStatus, patchCliJs } from '../utils/keyboard'
 
 export async function doctorFixCommand() {
@@ -31,6 +31,7 @@ export async function doctorFixCommand() {
     log('Verifying prerequisites...')
     await verifyPrerequisites()
   } catch (err) {
+    logError('doctor-fix', err)
     console.error(`\n✗ Cannot fix: ${getErrorMsg(err)}\n`)
     process.exit(1)
   }
@@ -72,6 +73,7 @@ export async function doctorFixCommand() {
         log('CLAUDE.md: OK')
       }
     } catch (err) {
+      logError('doctor-fix', err)
       console.error(`  ✗ Config/CLAUDE.md fix failed: ${getErrorMsg(err)}`)
     } finally {
       await cleanup(tmpDir)
@@ -95,6 +97,7 @@ export async function doctorFixCommand() {
       log(`Skills installed (${sha.slice(0, 8)})`)
       fixed++
     } catch (err) {
+      logError('doctor-fix', err)
       console.error(`  ✗ Skills fix failed: ${getErrorMsg(err)}`)
     } finally {
       await cleanup(tmpDir)
@@ -119,6 +122,7 @@ export async function doctorFixCommand() {
         console.error(`  ✗ Keyboard fix failed: ${result.message}`)
       }
     } catch (err) {
+      logError('doctor-fix', err)
       console.error(`  ✗ Keyboard fix failed: ${getErrorMsg(err)}`)
     }
   } else if (kbStatus.cliJsFound && kbStatus.isPatched) {

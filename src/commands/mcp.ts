@@ -4,6 +4,7 @@ import { promisify } from 'util'
 import { log } from '../utils/config'
 import {
   getErrorMsg,
+  logError,
   checkBin,
   requireClaude,
   printSummary,
@@ -88,6 +89,7 @@ async function addModule(mod: McpModule): Promise<boolean> {
     await exec('claude', ['mcp', 'add-json', mod.name, JSON.stringify(config)])
     return true
   } catch (err) {
+    logError('mcp', err)
     console.error(`  ✗ Failed to add ${mod.name}: ${getErrorMsg(err)}`)
     return false
   }
@@ -103,6 +105,7 @@ async function removeModule(name: string): Promise<boolean> {
       console.log(`  ⚠ ${name} not configured, skipping`)
       return true
     }
+    logError('mcp', err)
     console.error(`  ✗ Failed to remove ${name}: ${msg}`)
     return false
   }

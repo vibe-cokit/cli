@@ -1,11 +1,16 @@
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { get, mapValues, keys, filter, some, maxBy, size } from 'lodash-es'
+import { logger } from './logger'
 
 const exec = promisify(execFile)
 
 export function getErrorMsg(err: unknown): string {
   return err instanceof Error ? err.message : String(err)
+}
+
+export function logError(command: string, err: unknown): void {
+  logger.error(command, getErrorMsg(err), err).catch(() => {})
 }
 
 export async function checkBin(name: string): Promise<boolean> {

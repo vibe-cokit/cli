@@ -16,7 +16,7 @@ import {
   copyAgentFolder,
   ensureGitignore,
 } from '../utils/config'
-import { getErrorMsg } from '../utils/helpers'
+import { getErrorMsg, logError } from '../utils/helpers'
 
 const VALID_AGENTS = ['claude-code', 'antigravity'] as const
 type AgentType = (typeof VALID_AGENTS)[number]
@@ -68,6 +68,7 @@ async function initClaudeCode() {
     console.log(`  Config:  ~/.claude/`)
     console.log(`  Claude:  ./CLAUDE.md\n`)
   } catch (err) {
+    logError('init', err)
     console.error(`\n✗ Init failed: ${getErrorMsg(err)}\n`)
     process.exit(1)
   } finally {
@@ -113,6 +114,7 @@ async function initAntigravity() {
     console.log(`  Version: ${sha.slice(0, 8)}`)
     console.log(`  Agent:   ./.agents/\n`)
   } catch (err) {
+    logError('init', err)
     console.error(`\n✗ Init failed: ${getErrorMsg(err)}\n`)
     process.exit(1)
   } finally {

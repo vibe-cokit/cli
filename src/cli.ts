@@ -11,6 +11,11 @@ import { doctorFixCommand } from './commands/doctor-fix'
 import { mcpCommand } from './commands/mcp'
 import { pluginCommand } from './commands/plugin'
 import { toolsCommand } from './commands/tools'
+import { logsCommand } from './commands/logs'
+import { logger } from './utils/logger'
+
+const debugMode = process.argv.includes('--debug') || process.env['VK_DEBUG'] === '1'
+await logger.init(debugMode)
 
 const cli = cac('vibe-cokit')
 
@@ -68,6 +73,15 @@ cli
   .action((action: string | undefined, args: string[]) => {
     return toolsCommand(action, args)
   })
+
+cli
+  .command('logs', 'View or manage diagnostic log files (~/.vk/logs/)')
+  .option('--tail <n>', 'Number of lines to show (default: 50)')
+  .option('--clear', 'Delete all log files')
+  .option('--path', 'Print log directory path')
+  .action((options: { tail?: number; clear?: boolean; path?: boolean }) => logsCommand(options))
+
+cli.option('--debug', 'Enable debug logging to ~/.vk/logs/')
 
 cli.help()
 cli.version(version)
