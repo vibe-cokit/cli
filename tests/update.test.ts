@@ -6,7 +6,7 @@ const CLI = './src/cli.ts'
 test('--help shows update command', async () => {
   const result = await $`bun ${CLI} --help`.text()
   expect(result).toContain('update')
-  expect(result).toContain('Update agent config to latest (claude-code | antigravity)')
+  expect(result).toContain('Update agent config to latest (claude-code | antigravity | opencode)')
 })
 
 test('update --help shows description and [ref] arg', async () => {

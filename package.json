@@ -1,7 +1,7 @@
 {
   "name": "vibe-cokit",
   "version": "0.1.0",
-  "description": "A toolkit for interacting with Claude Code",
+  "description": "A toolkit for interacting with Claude Code and OpenCode",
   "module": "index.ts",
   "type": "module",
   "bin": {

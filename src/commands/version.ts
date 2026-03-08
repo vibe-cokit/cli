@@ -1,9 +1,10 @@
 import { version } from '../../package.json'
-import { getCurrentVersion, getSkillsVersion } from '../utils/config'
+import { getCurrentVersion, getOpenCodeVersion, getSkillsVersion } from '../utils/config'
 
 export async function versionCommand() {
   const commitSha = await getCurrentVersion()
   const skillsSha = await getSkillsVersion()
+  const opencodeSha = await getOpenCodeVersion()
 
   console.log(`\nvibe-cokit v${version}`)
 
@@ -17,6 +18,12 @@ export async function versionCommand() {
     console.log(`  Skills commit:  ${skillsSha.slice(0, 10)}`)
   } else {
     console.log(`  Skills commit:  not installed`)
+  }
+
+  if (opencodeSha) {
+    console.log(`  OpenCode kit:   ${opencodeSha.slice(0, 10)}`)
+  } else {
+    console.log(`  OpenCode kit:   not installed`)
   }
 
   console.log()

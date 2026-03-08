@@ -1,19 +1,19 @@
 import { version } from '../../package.json'
 
 const HELP_TEXT = `
-vibe-cokit v${version} — A toolkit for interacting with Claude Code
+vibe-cokit v${version} — A toolkit for interacting with Claude Code and OpenCode
 
 USAGE
   vk <command> [options]
 
 COMMANDS
   init              Set up vibe-cokit for the current project
-                    Clones config repo, copies agents/commands/hooks/prompts/workflows
-                    to ~/.claude/, adds CLAUDE.md to current directory, runs claude init
+                    Supports claude-code, antigravity, and opencode setup flows
+                    OpenCode installs AGENTS.md, opencode.jsonc, .opencode/, and docs/opencode/
 
-  update [ref]      Update everything: CLI + config + skills
-                    Upgrades CLI package via npm, updates config and skills
-                    Compares versions with remote, skips if already up-to-date
+  update [agent]    Update CLI or a specific kit (claude-code | antigravity | opencode)
+                    Upgrades CLI package via npm, then updates the selected kit when provided
+                    OpenCode updates the project-local OpenCode kit files and tracked commit
                     Aliases: upgrade
 
   skills [ref]      Install or update skills from vibe-cokit skills repo
@@ -35,7 +35,9 @@ COMMANDS
 
 EXAMPLES
   vk init                                  # Initialize vibe-cokit
+  vk init opencode                         # Install the OpenCode kit in this project
   vk update                                # Update CLI + config + skills
+  vk update opencode                       # Update the project OpenCode kit
   vk skills                                # Install/update all skills
   vk mcp install                           # List available MCP modules
   vk mcp install serena context7           # Install specific MCP servers
@@ -60,6 +62,7 @@ FILES
   ~/.claude/        Config directory (agents, commands, hooks, prompts, workflows)
   ~/.claude/skills/ Skills directory
   ./CLAUDE.md       Project-level Claude config (created by init)
+  ./opencode.jsonc  Project OpenCode config (created by init opencode)
 `
 
 export function helpCommand() {

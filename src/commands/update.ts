@@ -4,6 +4,7 @@ import { promisify } from 'util'
 import {
   SKILLS_REPO,
   ANTIGRAVITY_REPO,
+  OPENCODE_REPO,
   ANTIGRAVITY_SKILLS_DIR,
   CLAUDE_SKILLS_DIR,
   TEMP_DIR,
@@ -13,15 +14,18 @@ import {
   copyConfigFolders,
   copySkillFolders,
   copyAgentFolder,
+  copyOpenCodeKit,
   dirExists,
   getCommitSha,
   updateSettings,
   updateSkillsVersion,
   updateAntigravityVersion,
+  updateOpenCodeVersion,
   cleanup,
   getCurrentVersion,
   getSkillsVersion,
   getAntigravityVersion,
+  getOpenCodeVersion,
   getRemoteSha,
   upgradeCli,
 } from '../utils/config'
@@ -29,7 +33,7 @@ import { getErrorMsg, logError } from '../utils/helpers'
 
 const exec = promisify(execFile)
 
-const VALID_AGENTS = ['claude-code', 'antigravity'] as const
+const VALID_AGENTS = ['claude-code', 'antigravity', 'opencode'] as const
 type AgentType = (typeof VALID_AGENTS)[number]
 
 export async function updateCommand(agent?: string, ref?: string) {
@@ -71,6 +75,9 @@ export async function updateCommand(agent?: string, ref?: string) {
         case 'antigravity':
           await updateAntigravity(ref)
           await updateSkills(ref, ANTIGRAVITY_SKILLS_DIR)
+          break
+        case 'opencode':
+          await updateOpenCode(ref)
           break
       }
     }
@@ -198,6 +205,42 @@ async function updateAntigravity(ref?: string) {
 
     const from = currentSha ? currentSha.slice(0, 8) : 'none'
     log(`Antigravity updated: ${from} → ${sha.slice(0, 8)}`)
+  } finally {
+    await cleanup(tmpDir)
+  }
+}
+
+async function updateOpenCode(ref?: string) {
+  const tmpDir = join(TEMP_DIR, crypto.randomUUID())
+
+  try {
+    log('Checking OpenCode kit version...')
+    const currentSha = await getOpenCodeVersion()
+
+    log('Fetching latest OpenCode kit version...')
+    const targetSha = await getRemoteSha(ref, OPENCODE_REPO)
+
+    if (currentSha && currentSha === targetSha) {
+      log(`OpenCode kit: up-to-date (${currentSha.slice(0, 8)})`)
+      return
+    }
+
+    log('Cloning OpenCode kit...')
+    await cloneRepo(tmpDir, OPENCODE_REPO)
+
+    if (ref) {
+      log(`Checking out ${ref}...`)
+      await exec('git', ['-C', tmpDir, 'checkout', ref])
+    }
+
+    log('Updating OpenCode kit in current project...')
+    await copyOpenCodeKit(tmpDir)
+
+    const sha = await getCommitSha(tmpDir)
+    await updateOpenCodeVersion(sha)
+
+    const from = currentSha ? currentSha.slice(0, 8) : 'none'
+    log(`OpenCode kit updated: ${from} -> ${sha.slice(0, 8)}`)
   } finally {
     await cleanup(tmpDir)
   }

@@ -1,6 +1,6 @@
 # vibe-cokit (vk)
 
-A toolkit for interacting with Claude Code.
+A toolkit for interacting with Claude Code and OpenCode.
 
 ## Install
 
@@ -12,7 +12,9 @@ bun install -g vibe-cokit
 
 ```bash
 vk init                # Initialize vibe-cokit for current project
+vk init opencode       # Install the OpenCode kit in current project
 vk update              # Update CLI + config + skills
+vk update opencode     # Update the OpenCode kit in current project
 vk skills              # Install/update skills
 vk doctor              # Health check setup
 vk doctor --fix        # Auto-fix setup issues
@@ -45,7 +47,7 @@ Available plugins: `context7`, `code-review`, `ralph-loop`, `typescript-lsp`, `p
 
 - [gh](https://cli.github.com) — GitHub CLI
 - [git](https://git-scm.com) — Git version control
-- [claude](https://docs.anthropic.com/en/docs/claude-code) — Claude Code CLI (for mcp/plugin commands)
+- [claude](https://docs.anthropic.com/en/docs/claude-code) — Claude Code CLI (for Claude setup and mcp/plugin commands)
 
 ## Development
 

@@ -1,5 +1,5 @@
 import { homedir } from 'os'
-import { join } from 'path'
+import { dirname, join } from 'path'
 import { mkdir, cp, rm, stat, readdir, readFile, writeFile, appendFile } from 'fs/promises'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
@@ -10,6 +10,7 @@ const exec = promisify(execFile)
 
 export const REPO = 'vibe-cokit/claude-code'
 export const ANTIGRAVITY_REPO = 'vibe-cokit/antigravity'
+export const OPENCODE_REPO = 'vibe-cokit/opencode'
 export const SKILLS_REPO = 'vibe-cokit/skills'
 export const CLAUDE_DIR = join(homedir(), '.claude')
 export const CLAUDE_SKILLS_DIR = join(CLAUDE_DIR, 'skills')
@@ -17,6 +18,7 @@ export const ANTIGRAVITY_SKILLS_DIR = join(homedir(), '.gemini', 'antigravity', 
 export const CONFIG_FOLDERS = ['agents', 'commands', 'hooks', 'prompts', 'workflows'] as const
 export const TEMP_DIR = join(homedir(), '.vibe-cokit-tmp')
 const SETTINGS_PATH = join(CLAUDE_DIR, 'settings.json')
+const OPENCODE_SETTINGS_PATH = join(process.cwd(), '.opencode', '.vk.json')
 
 export function log(step: string) {
   console.log(`  → ${step}`)
@@ -106,6 +108,19 @@ async function writeSettings(settings: Record<string, unknown>) {
   await Bun.write(SETTINGS_PATH, JSON.stringify(settings, null, 2))
 }
 
+async function readOpenCodeSettings(): Promise<Record<string, unknown>> {
+  const file = Bun.file(OPENCODE_SETTINGS_PATH)
+  if (await file.exists()) {
+    return await file.json()
+  }
+  return {}
+}
+
+async function writeOpenCodeSettings(settings: Record<string, unknown>) {
+  await mkdir(dirname(OPENCODE_SETTINGS_PATH), { recursive: true })
+  await Bun.write(OPENCODE_SETTINGS_PATH, JSON.stringify(settings, null, 2))
+}
+
 export async function updateSettings(commitSha: string) {
   const settings = await readSettings()
   settings.version = commitSha
@@ -123,6 +138,17 @@ export async function cleanup(tmpDir: string) {
 export async function getCurrentVersion(): Promise<string | null> {
   const settings = await readSettings()
   return get(settings, 'version', null) as string | null
+}
+
+export async function getOpenCodeVersion(): Promise<string | null> {
+  const settings = await readOpenCodeSettings()
+  return get(settings, 'version', null) as string | null
+}
+
+export async function updateOpenCodeVersion(commitSha: string) {
+  const settings = await readOpenCodeSettings()
+  settings.version = commitSha
+  await writeOpenCodeSettings(settings)
 }
 
 export async function getRemoteSha(ref?: string, repo: string = REPO): Promise<string> {
@@ -207,6 +233,20 @@ export async function copyAgentFolder(srcDir: string) {
     const target = join(dest, entry.name)
     await cp(src, target, { recursive: true, force: true })
   }
+}
+
+export async function copyOpenCodeKit(srcDir: string) {
+  const cwd = process.cwd()
+
+  await cp(join(srcDir, 'AGENTS.md'), join(cwd, 'AGENTS.md'), { force: true })
+  await cp(join(srcDir, 'opencode.jsonc'), join(cwd, 'opencode.jsonc'), { force: true })
+  await cp(join(srcDir, '.opencode'), join(cwd, '.opencode'), { recursive: true, force: true })
+
+  await mkdir(join(cwd, 'docs'), { recursive: true })
+  await cp(join(srcDir, 'docs', 'opencode'), join(cwd, 'docs', 'opencode'), {
+    recursive: true,
+    force: true,
+  })
 }
 
 export async function ensureGitignore(entry: string) {

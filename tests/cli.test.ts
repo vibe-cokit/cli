@@ -11,7 +11,7 @@ test('--version outputs version from package.json', async () => {
 test('--help shows CLI name and description', async () => {
   const result = await $`bun ${CLI} --help`.text()
   expect(result).toContain('vibe-cokit')
-  expect(result).toContain('A toolkit for interacting with Claude Code')
+  expect(result).toContain('A toolkit for interacting with Claude Code and OpenCode')
 })
 
 test('--help shows available options', async () => {

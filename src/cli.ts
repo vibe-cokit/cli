@@ -20,17 +20,17 @@ await logger.init(debugMode)
 const cli = cac('vibe-cokit')
 
 cli
-  .command('', 'A toolkit for interacting with Claude Code')
+  .command('', 'A toolkit for interacting with Claude Code and OpenCode')
   .action(() => {
     cli.outputHelp()
   })
 
 cli
-  .command('init [agent]', 'Initialize vibe-cokit (claude-code | antigravity)')
+  .command('init [agent]', 'Initialize vibe-cokit (claude-code | antigravity | opencode)')
   .action((agent?: string) => initCommand(agent))
 
 cli
-  .command('update [agent] [ref]', 'Update agent config to latest (claude-code | antigravity)')
+  .command('update [agent] [ref]', 'Update agent config to latest (claude-code | antigravity | opencode)')
   .alias('upgrade')
   .action((agent: string, ref?: string) => updateCommand(agent, ref))
 

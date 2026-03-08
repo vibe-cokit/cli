@@ -24,3 +24,8 @@ test('version shows skills commit status', async () => {
   const result = await $`bun ${CLI} version`.text()
   expect(result).toContain('Skills commit:')
 })
+
+test('version shows opencode commit status', async () => {
+  const result = await $`bun ${CLI} version`.text()
+  expect(result).toContain('OpenCode kit:')
+})
