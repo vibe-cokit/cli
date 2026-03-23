@@ -15,7 +15,7 @@ test('skills --help shows description and [ref] arg', async () => {
   expect(result).toContain('[ref]')
 })
 
-test('skills fails gracefully when gh is not available', async () => {
-  const result = await $`PATH="" bun ${CLI} skills 2>&1`.quiet().nothrow().text()
+test('skills fails gracefully when ref cannot be resolved', async () => {
+  const result = await $`bun ${CLI} skills definitely-not-a-real-ref 2>&1`.quiet().nothrow().text()
   expect(result).toContain('Skills setup failed')
 })

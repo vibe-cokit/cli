@@ -2,9 +2,9 @@ import { join } from 'path'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import {
+  REPO,
   SKILLS_REPO,
   ANTIGRAVITY_REPO,
-  OPENCODE_REPO,
   ANTIGRAVITY_SKILLS_DIR,
   CLAUDE_SKILLS_DIR,
   TEMP_DIR,
@@ -29,6 +29,7 @@ import {
   getRemoteSha,
   upgradeCli,
 } from '../utils/config'
+import { buildOpenCodeKit } from '../utils/opencode-kit'
 import { getErrorMsg, logError } from '../utils/helpers'
 
 const exec = promisify(execFile)
@@ -218,20 +219,23 @@ async function updateOpenCode(ref?: string) {
     const currentSha = await getOpenCodeVersion()
 
     log('Fetching latest OpenCode kit version...')
-    const targetSha = await getRemoteSha(ref, OPENCODE_REPO)
+    const targetSha = await getRemoteSha(ref, REPO)
 
     if (currentSha && currentSha === targetSha) {
       log(`OpenCode kit: up-to-date (${currentSha.slice(0, 8)})`)
       return
     }
 
-    log('Cloning OpenCode kit...')
-    await cloneRepo(tmpDir, OPENCODE_REPO)
+    log('Cloning Claude Code source...')
+    await cloneRepo(tmpDir, REPO)
 
     if (ref) {
       log(`Checking out ${ref}...`)
       await exec('git', ['-C', tmpDir, 'checkout', ref])
     }
+
+    log('Generating OpenCode kit...')
+    await buildOpenCodeKit(tmpDir)
 
     log('Updating OpenCode kit in current project...')
     await copyOpenCodeKit(tmpDir)

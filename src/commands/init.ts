@@ -1,8 +1,8 @@
 import { join } from 'path'
 import {
   TEMP_DIR,
+  REPO,
   ANTIGRAVITY_REPO,
-  OPENCODE_REPO,
   SKILLS_REPO,
   log,
   verifyPrerequisites,
@@ -19,6 +19,7 @@ import {
   ensureGitignore,
   updateOpenCodeVersion,
 } from '../utils/config'
+import { buildOpenCodeKit } from '../utils/opencode-kit'
 import { getErrorMsg, logError } from '../utils/helpers'
 
 const VALID_AGENTS = ['claude-code', 'antigravity', 'opencode'] as const
@@ -136,8 +137,11 @@ async function initOpenCode() {
     log('Verifying prerequisites...')
     await verifyPrerequisites()
 
-    log('Cloning OpenCode kit...')
-    await cloneRepo(tmpDir, OPENCODE_REPO)
+    log('Cloning Claude Code source...')
+    await cloneRepo(tmpDir, REPO)
+
+    log('Generating OpenCode kit...')
+    await buildOpenCodeKit(tmpDir)
 
     log('Installing OpenCode kit into current project...')
     await copyOpenCodeKit(tmpDir)
