@@ -12,6 +12,7 @@ import { mcpCommand } from './commands/mcp'
 import { pluginCommand } from './commands/plugin'
 import { toolsCommand } from './commands/tools'
 import { logsCommand } from './commands/logs'
+import { dockerStopAllCommand } from './commands/docker'
 import { logger } from './utils/logger'
 
 const debugMode = process.argv.includes('--debug') || process.env['VK_DEBUG'] === '1'
@@ -72,6 +73,12 @@ cli
   .command('tools [action] [...args]', 'Developer utilities (kill-port, etc.)')
   .action((action: string | undefined, args: string[]) => {
     return toolsCommand(action, args)
+  })
+
+cli
+  .command('docker container stop all', 'Stop all docker containers')
+  .action(() => {
+    return dockerStopAllCommand()
   })
 
 cli

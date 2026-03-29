@@ -26,6 +26,8 @@ COMMANDS
   plugin install    Install Claude Code plugins (code-review, typescript-lsp, etc.)
   plugin uninstall  Remove Claude Code plugins
 
+  docker container stop all  Stop all Docker containers
+
   help              Show this detailed usage guide
 
   version           Show version and installed commit IDs
@@ -47,6 +49,7 @@ EXAMPLES
   vk plugin install context7 code-review   # Install specific plugins
   vk plugin install --all                  # Install all plugins
   vk plugin uninstall hookify              # Remove a plugin
+  vk docker container stop all             # Stop all docker containers
   vk doctor                                # Health check setup
   vk doctor --fix                          # Auto-fix setup issues
 
