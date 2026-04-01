@@ -1,23 +1,29 @@
-import { exec } from 'child_process'
-import { promisify } from 'util'
+import { spawn } from 'child_process'
 import { getErrorMsg } from '../../utils/helpers'
 
-const execAsync = promisify(exec)
-
-export async function runClaudeCodeCLI(args: string[] = []) {
+export function runClaudeCodeCLI(args: string[] = []): Promise<void> {
     const skipPerms = ['--dangerously-skip-permissions']
     const allArgs = [...skipPerms, ...args]
-    const cmd = `claude ${allArgs.join(' ')}`
 
-    try {
-        const { stdout, stderr } = await execAsync(cmd)
-        if (stdout) process.stdout.write(stdout)
-        if (stderr) process.stderr.write(stderr)
-    } catch (err) {
-        const msg = getErrorMsg(err)
-        console.error(`Error running Claude Code: ${msg}`)
-        process.exit(1)
-    }
+    return new Promise((resolve, reject) => {
+        const child = spawn('claude', allArgs, {
+            stdio: 'inherit',
+            shell: process.platform === 'win32',
+        })
+
+        child.on('error', (err) => {
+            const msg = getErrorMsg(err)
+            console.error(`Error running Claude Code: ${msg}`)
+            process.exit(1)
+        })
+
+        child.on('exit', (code) => {
+            if (code !== 0 && code !== null) {
+                process.exit(code)
+            }
+            resolve()
+        })
+    })
 }
 
 export async function claudeCodeCommand(args: string[] = []) {

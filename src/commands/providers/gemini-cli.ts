@@ -1,21 +1,26 @@
-import { exec } from 'child_process'
-import { promisify } from 'util'
+import { spawn } from 'child_process'
 import { getErrorMsg } from '../../utils/helpers'
 
-const execAsync = promisify(exec)
+export function runGeminiCLI(args: string[] = []): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const child = spawn('gemini', args, {
+            stdio: 'inherit',
+            shell: process.platform === 'win32',
+        })
 
-export async function runGeminiCLI(args: string[] = []) {
-    const cmd = `gemini ${args.join(' ')}`
+        child.on('error', (err) => {
+            const msg = getErrorMsg(err)
+            console.error(`Error running Gemini CLI: ${msg}`)
+            process.exit(1)
+        })
 
-    try {
-        const { stdout, stderr } = await execAsync(cmd)
-        if (stdout) process.stdout.write(stdout)
-        if (stderr) process.stderr.write(stderr)
-    } catch (err) {
-        const msg = getErrorMsg(err)
-        console.error(`Error running Gemini CLI: ${msg}`)
-        process.exit(1)
-    }
+        child.on('exit', (code) => {
+            if (code !== 0 && code !== null) {
+                process.exit(code)
+            }
+            resolve()
+        })
+    })
 }
 
 export async function geminiCLICommand(args: string[] = []) {
