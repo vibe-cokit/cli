@@ -13,6 +13,7 @@ import { pluginCommand } from './commands/plugin'
 import { toolsCommand } from './commands/tools'
 import { logsCommand } from './commands/logs'
 import { dockerStopAllCommand } from './commands/docker'
+import { claudeCodeCommand } from './commands/providers/claude-code'
 import { logger } from './utils/logger'
 
 const debugMode = process.argv.includes('--debug') || process.env['VK_DEBUG'] === '1'
@@ -79,6 +80,12 @@ cli
   .command('docker container stop all', 'Stop all docker containers')
   .action(() => {
     return dockerStopAllCommand()
+  })
+
+cli
+  .command('ccd [...args]', 'Run claude with --dangerously-skip-permissions')
+  .action((args: string[]) => {
+    return claudeCodeCommand(args)
   })
 
 cli
