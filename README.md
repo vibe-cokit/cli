@@ -24,6 +24,7 @@ vk update              # Update CLI + config + skills
 vk update antigravity  # Update the Antigravity kit in current project
 vk update opencode     # Update the OpenCode kit in current project
 vk skills              # Install/update skills
+vk migrate -a codex -g # Migrate Claude Code kit to global Codex config
 vk version             # Show CLI + installed kit versions
 vk doctor              # Health check setup
 vk doctor --fix        # Auto-fix setup issues

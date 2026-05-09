@@ -26,6 +26,9 @@ COMMANDS
   plugin install    Install Claude Code plugins (code-review, typescript-lsp, etc.)
   plugin uninstall  Remove Claude Code plugins
 
+  migrate           Migrate Claude Code config to another agent/provider
+                    Supports Codex via: agents, prompts, skills, AGENTS.md, and hooks
+
   docker container stop all  Stop all Docker containers
 
   help              Show this detailed usage guide
@@ -49,6 +52,8 @@ EXAMPLES
   vk plugin install context7 code-review   # Install specific plugins
   vk plugin install --all                  # Install all plugins
   vk plugin uninstall hookify              # Remove a plugin
+  vk migrate -a codex -g                   # Migrate Claude Code kit to global Codex config
+  vk migrate -a codex -g --dry-run         # Preview Codex migration
   vk docker container stop all             # Stop all docker containers
   vk doctor                                # Health check setup
   vk doctor --fix                          # Auto-fix setup issues
@@ -64,6 +69,8 @@ PREREQUISITES
 FILES
   ~/.claude/        Config directory (agents, commands, hooks, prompts, workflows)
   ~/.claude/skills/ Skills directory
+  ~/.codex/         Codex target directory for migrate -a codex -g
+  ~/.agents/skills/ Codex global skills target for migrate -a codex -g
   ./CLAUDE.md       Project-level Claude config (created by init)
   ./opencode.jsonc  Project OpenCode config (created by init opencode)
 `

@@ -14,6 +14,7 @@ import { toolsCommand } from './commands/tools'
 import { logsCommand } from './commands/logs'
 import { dockerStopAllCommand } from './commands/docker'
 import { claudeCodeCommand } from './commands/providers/claude-code'
+import { migrateCommand } from './commands/migrate'
 import { logger } from './utils/logger'
 
 const debugMode = process.argv.includes('--debug') || process.env['VK_DEBUG'] === '1'
@@ -74,6 +75,21 @@ cli
   .command('tools [action] [...args]', 'Developer utilities (kill-port, etc.)')
   .action((action: string | undefined, args: string[]) => {
     return toolsCommand(action, args)
+  })
+
+cli
+  .command('migrate', 'Migrate vibe-cokit Claude Code config to other agents')
+  .option('-a, --agent <agents...>', 'Target agent/provider (codex)')
+  .option('-g, --global', 'Install globally instead of project-level')
+  .option('-y, --yes', 'Skip confirmation prompts')
+  .option('--dry-run', 'Preview migration without writing files')
+  .action((options: { agent?: string | string[]; global?: boolean; yes?: boolean; dryRun?: boolean }) => {
+    const agents = options.agent === undefined
+      ? undefined
+      : Array.isArray(options.agent)
+        ? options.agent
+        : [options.agent]
+    return migrateCommand({ ...options, agent: agents })
   })
 
 cli
