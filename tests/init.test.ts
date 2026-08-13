@@ -6,7 +6,7 @@ const CLI = './src/cli.ts'
 test('--help shows init command', async () => {
   const result = await $`bun ${CLI} --help`.text()
   expect(result).toContain('init')
-  expect(result).toContain('Initialize vibe-cokit (claude-code | antigravity | opencode)')
+  expect(result).toContain('Initialize vibe-cokit for the current project')
 })
 
 test('init --help shows init command description', async () => {

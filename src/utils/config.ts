@@ -1,6 +1,6 @@
 import { homedir } from 'os'
-import { dirname, join } from 'path'
-import { mkdir, cp, rm, stat, readdir, readFile, writeFile, appendFile } from 'fs/promises'
+import { join } from 'path'
+import { mkdir, cp, rm, stat, readdir } from 'fs/promises'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { get } from 'lodash-es'
@@ -9,16 +9,11 @@ import { getErrorMsg } from './helpers'
 const exec = promisify(execFile)
 
 export const REPO = 'vibe-cokit/claude-code'
-export const ANTIGRAVITY_REPO = 'vibe-cokit/antigravity'
-export const OPENCODE_REPO = 'vibe-cokit/opencode'
-export const SKILLS_REPO = 'vibe-cokit/skills'
 export const CLAUDE_DIR = join(homedir(), '.claude')
 export const CLAUDE_SKILLS_DIR = join(CLAUDE_DIR, 'skills')
-export const ANTIGRAVITY_SKILLS_DIR = join(homedir(), '.gemini', 'antigravity', 'skills')
 export const CONFIG_FOLDERS = ['agents', 'commands', 'hooks', 'prompts', 'workflows'] as const
 export const TEMP_DIR = join(homedir(), '.vibe-cokit-tmp')
 const SETTINGS_PATH = join(CLAUDE_DIR, 'settings.json')
-const OPENCODE_SETTINGS_PATH = join(process.cwd(), '.opencode', '.vk.json')
 
 export function log(step: string) {
   console.log(`  → ${step}`)
@@ -108,19 +103,6 @@ async function writeSettings(settings: Record<string, unknown>) {
   await Bun.write(SETTINGS_PATH, JSON.stringify(settings, null, 2))
 }
 
-async function readOpenCodeSettings(): Promise<Record<string, unknown>> {
-  const file = Bun.file(OPENCODE_SETTINGS_PATH)
-  if (await file.exists()) {
-    return await file.json()
-  }
-  return {}
-}
-
-async function writeOpenCodeSettings(settings: Record<string, unknown>) {
-  await mkdir(dirname(OPENCODE_SETTINGS_PATH), { recursive: true })
-  await Bun.write(OPENCODE_SETTINGS_PATH, JSON.stringify(settings, null, 2))
-}
-
 export async function updateSettings(commitSha: string) {
   const settings = await readSettings()
   settings.version = commitSha
@@ -138,17 +120,6 @@ export async function cleanup(tmpDir: string) {
 export async function getCurrentVersion(): Promise<string | null> {
   const settings = await readSettings()
   return get(settings, 'version', null) as string | null
-}
-
-export async function getOpenCodeVersion(): Promise<string | null> {
-  const settings = await readOpenCodeSettings()
-  return get(settings, 'version', null) as string | null
-}
-
-export async function updateOpenCodeVersion(commitSha: string) {
-  const settings = await readOpenCodeSettings()
-  settings.version = commitSha
-  await writeOpenCodeSettings(settings)
 }
 
 export async function getRemoteSha(ref?: string, repo: string = REPO): Promise<string> {
@@ -183,17 +154,6 @@ export async function getSkillsVersion(): Promise<string | null> {
   return get(settings, 'skillsVersion', null) as string | null
 }
 
-export async function updateAntigravityVersion(commitSha: string) {
-  const settings = await readSettings()
-  settings.antigravityVersion = commitSha
-  await writeSettings(settings)
-}
-
-export async function getAntigravityVersion(): Promise<string | null> {
-  const settings = await readSettings()
-  return get(settings, 'antigravityVersion', null) as string | null
-}
-
 export async function upgradeCli(): Promise<{ upgraded: boolean; from: string; to: string }> {
   // Get currently installed version from bun global packages
   const { stdout: installedRaw } = await exec('bun', ['pm', 'ls', '-g'])
@@ -220,45 +180,4 @@ export async function upgradeCli(): Promise<{ upgraded: boolean; from: string; t
 
   await exec('bun', ['install', '-g', '--registry', 'https://registry.npmjs.org', `vibe-cokit@${latestVersion}`])
   return { upgraded: true, from: currentVersion, to: latestVersion }
-}
-
-export async function copyAgentFolder(srcDir: string) {
-  const dest = join(process.cwd(), '.agents')
-  await mkdir(dest, { recursive: true })
-
-  const entries = await readdir(srcDir, { withFileTypes: true })
-  for (const entry of entries) {
-    if (entry.name.startsWith('.git')) continue
-    const src = join(srcDir, entry.name)
-    const target = join(dest, entry.name)
-    await cp(src, target, { recursive: true, force: true })
-  }
-}
-
-export async function copyOpenCodeKit(srcDir: string) {
-  const cwd = process.cwd()
-
-  await cp(join(srcDir, 'AGENTS.md'), join(cwd, 'AGENTS.md'), { force: true })
-  await cp(join(srcDir, 'opencode.jsonc'), join(cwd, 'opencode.jsonc'), { force: true })
-  await cp(join(srcDir, '.opencode'), join(cwd, '.opencode'), { recursive: true, force: true })
-
-  await mkdir(join(cwd, 'docs'), { recursive: true })
-  await cp(join(srcDir, 'docs', 'opencode'), join(cwd, 'docs', 'opencode'), {
-    recursive: true,
-    force: true,
-  })
-}
-
-export async function ensureGitignore(entry: string) {
-  const gitignorePath = join(process.cwd(), '.gitignore')
-
-  try {
-    const content = await readFile(gitignorePath, 'utf-8')
-    const lines = content.split(/\r?\n/)
-    if (lines.some(line => line.trim() === entry)) return
-    const separator = content.endsWith('\n') ? '' : '\n'
-    await appendFile(gitignorePath, `${separator}${entry}\n`)
-  } catch {
-    await writeFile(gitignorePath, `${entry}\n`)
-  }
 }

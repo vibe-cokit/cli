@@ -2,7 +2,6 @@ import { join } from 'path'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import {
-  SKILLS_REPO,
   TEMP_DIR,
   log,
   verifyPrerequisites,
@@ -31,15 +30,15 @@ export async function skillsCommand(ref?: string) {
     const currentSha = await getSkillsVersion()
 
     log('Fetching latest skills version...')
-    const targetSha = await getRemoteSha(ref, SKILLS_REPO)
+    const targetSha = await getRemoteSha(ref)
 
     if (currentSha && currentSha === targetSha) {
       console.log(`\n✓ Skills already up-to-date (${currentSha.slice(0, 8)})\n`)
       return
     }
 
-    log('Cloning skills repository...')
-    await cloneRepo(tmpDir, SKILLS_REPO)
+    log('Cloning vibe-cokit configuration...')
+    await cloneRepo(tmpDir)
 
     if (ref) {
       log(`Checking out ${ref}...`)
@@ -47,7 +46,7 @@ export async function skillsCommand(ref?: string) {
     }
 
     log('Copying skills to ~/.claude/skills/')
-    await copySkillFolders(tmpDir)
+    await copySkillFolders(join(tmpDir, 'skills'))
 
     log('Updating skills version...')
     const sha = await getCommitSha(tmpDir)

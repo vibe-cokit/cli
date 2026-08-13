@@ -1,22 +1,20 @@
 import { version } from '../../package.json'
 
 const HELP_TEXT = `
-vibe-cokit v${version} — A toolkit for interacting with Claude Code and OpenCode
+vibe-cokit v${version} — A toolkit for interacting with Claude Code
 
 USAGE
   vk <command> [options]
 
 COMMANDS
   init              Set up vibe-cokit for the current project
-                    Supports claude-code, antigravity, and opencode setup flows
-                    OpenCode installs AGENTS.md, opencode.jsonc, .opencode/, and docs/opencode/
+                    Installs config folders and skills to ~/.claude/, and CLAUDE.md to the project
 
-  update [agent]    Update CLI or a specific kit (claude-code | antigravity | opencode)
-                    Upgrades CLI package via npm, then updates the selected kit when provided
-                    OpenCode updates the project-local OpenCode kit files and tracked commit
+  update [ref]      Update CLI, config, and skills to latest
+                    Upgrades CLI package via npm, then updates ~/.claude/ config and skills
                     Aliases: upgrade
 
-  skills [ref]      Install or update skills from vibe-cokit skills repo
+  skills [ref]      Install or update skills from vibe-cokit
                     Copies skill folders to ~/.claude/skills/
                     Tracks version separately via skillsVersion in settings.json
 
@@ -25,9 +23,6 @@ COMMANDS
 
   plugin install    Install Claude Code plugins (code-review, typescript-lsp, etc.)
   plugin uninstall  Remove Claude Code plugins
-
-  migrate           Migrate Claude Code config to another agent/provider
-                    Supports Codex via: agents, prompts, skills, AGENTS.md, and hooks
 
   docker container stop all  Stop all Docker containers
 
@@ -40,9 +35,7 @@ COMMANDS
 
 EXAMPLES
   vk init                                  # Initialize vibe-cokit
-  vk init opencode                         # Install the OpenCode kit in this project
   vk update                                # Update CLI + config + skills
-  vk update opencode                       # Update the project OpenCode kit
   vk skills                                # Install/update all skills
   vk mcp install                           # List available MCP modules
   vk mcp install serena context7           # Install specific MCP servers
@@ -52,8 +45,6 @@ EXAMPLES
   vk plugin install context7 code-review   # Install specific plugins
   vk plugin install --all                  # Install all plugins
   vk plugin uninstall hookify              # Remove a plugin
-  vk migrate -a codex -g                   # Migrate Claude Code kit to global Codex config
-  vk migrate -a codex -g --dry-run         # Preview Codex migration
   vk docker container stop all             # Stop all docker containers
   vk doctor                                # Health check setup
   vk doctor --fix                          # Auto-fix setup issues
@@ -69,10 +60,7 @@ PREREQUISITES
 FILES
   ~/.claude/        Config directory (agents, commands, hooks, prompts, workflows)
   ~/.claude/skills/ Skills directory
-  ~/.codex/         Codex target directory for migrate -a codex -g
-  ~/.agents/skills/ Codex global skills target for migrate -a codex -g
   ./CLAUDE.md       Project-level Claude config (created by init)
-  ./opencode.jsonc  Project OpenCode config (created by init opencode)
 `
 
 export function helpCommand() {

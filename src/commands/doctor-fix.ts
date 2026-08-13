@@ -5,7 +5,6 @@ import {
   CLAUDE_SKILLS_DIR,
   CONFIG_FOLDERS,
   TEMP_DIR,
-  SKILLS_REPO,
   log,
   dirExists,
   fileExists,
@@ -90,8 +89,8 @@ export async function doctorFixCommand() {
     log('Skills missing — installing...')
     const tmpDir = join(TEMP_DIR, crypto.randomUUID())
     try {
-      await cloneRepo(tmpDir, SKILLS_REPO)
-      await copySkillFolders(tmpDir)
+      await cloneRepo(tmpDir)
+      await copySkillFolders(join(tmpDir, 'skills'))
       const sha = await getCommitSha(tmpDir)
       await updateSkillsVersion(sha)
       log(`Skills installed (${sha.slice(0, 8)})`)

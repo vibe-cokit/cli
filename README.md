@@ -1,6 +1,6 @@
 # vibe-cokit (vk)
 
-A toolkit for interacting with Claude Code, Antigravity, and OpenCode.
+A toolkit for interacting with Claude Code.
 
 ## Install
 
@@ -8,23 +8,12 @@ A toolkit for interacting with Claude Code, Antigravity, and OpenCode.
 bun install -g vibe-cokit
 ```
 
-## Supported Setup Flows
-
-- `claude-code` - installs the standard Claude Code project kit
-- `antigravity` - installs the Antigravity project kit
-- `opencode` - installs `AGENTS.md`, `opencode.jsonc`, `.opencode/`, and `docs/opencode/`
-
 ## Commands
 
 ```bash
 vk init                # Initialize vibe-cokit for current project
-vk init antigravity    # Install the Antigravity kit in current project
-vk init opencode       # Install the OpenCode kit in current project
 vk update              # Update CLI + config + skills
-vk update antigravity  # Update the Antigravity kit in current project
-vk update opencode     # Update the OpenCode kit in current project
 vk skills              # Install/update skills
-vk migrate -a codex -g # Migrate Claude Code kit to global Codex config
 vk version             # Show CLI + installed kit versions
 vk doctor              # Health check setup
 vk doctor --fix        # Auto-fix setup issues
@@ -62,8 +51,6 @@ Available plugins: `context7`, `code-review`, `ralph-loop`, `typescript-lsp`, `p
 ## Files Created
 
 - `./CLAUDE.md` - project-level Claude config created by `vk init`
-- `./opencode.jsonc` - project-level OpenCode config created by `vk init opencode`
-- `./.opencode/` - local OpenCode agents and metadata created by `vk init opencode`
 
 ## Development
 

@@ -2,10 +2,6 @@ import { join } from 'path'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import {
-  REPO,
-  SKILLS_REPO,
-  ANTIGRAVITY_REPO,
-  ANTIGRAVITY_SKILLS_DIR,
   CLAUDE_SKILLS_DIR,
   TEMP_DIR,
   log,
@@ -13,41 +9,23 @@ import {
   cloneRepo,
   copyConfigFolders,
   copySkillFolders,
-  copyAgentFolder,
-  copyOpenCodeKit,
   dirExists,
   getCommitSha,
   updateSettings,
   updateSkillsVersion,
-  updateAntigravityVersion,
-  updateOpenCodeVersion,
   cleanup,
   getCurrentVersion,
   getSkillsVersion,
-  getAntigravityVersion,
-  getOpenCodeVersion,
   getRemoteSha,
   upgradeCli,
 } from '../utils/config'
-import { buildOpenCodeKit } from '../utils/opencode-kit'
 import { getErrorMsg, logError } from '../utils/helpers'
 
 const exec = promisify(execFile)
 
-const VALID_AGENTS = ['claude-code', 'antigravity', 'opencode'] as const
-type AgentType = (typeof VALID_AGENTS)[number]
-
-export async function updateCommand(agent?: string, ref?: string) {
-  const agentType = agent as AgentType | undefined
-
-  if (agentType && !VALID_AGENTS.includes(agentType)) {
-    console.error(`\n✗ Unknown agent type: "${agent}"`)
-    console.error(`  Available agents: ${VALID_AGENTS.join(', ')}\n`)
-    process.exit(1)
-  }
-
+export async function updateCommand(ref?: string) {
   try {
-    console.log(`\nvibe-cokit update${agentType ? ` (${agentType})` : ''}\n`)
+    console.log('\nvibe-cokit update\n')
 
     // 1. Upgrade CLI binary
     log('Checking CLI version...')
@@ -64,24 +42,11 @@ export async function updateCommand(agent?: string, ref?: string) {
       log(`CLI upgrade skipped: ${reason}`)
     }
 
-    // 2. Agent-specific updates (only if agent is specified)
-    if (agentType) {
-      log('Verifying prerequisites...')
-      await verifyPrerequisites()
+    // 2. Update config + skills
+    log('Verifying prerequisites...')
+    await verifyPrerequisites()
 
-      switch (agentType) {
-        case 'claude-code':
-          await updateClaudeCode(ref)
-          break
-        case 'antigravity':
-          await updateAntigravity(ref)
-          await updateSkills(ref, ANTIGRAVITY_SKILLS_DIR)
-          break
-        case 'opencode':
-          await updateOpenCode(ref)
-          break
-      }
-    }
+    await updateConfigAndSkills(ref)
 
     console.log('\n✓ vibe-cokit update complete!\n')
   } catch (err) {
@@ -92,29 +57,26 @@ export async function updateCommand(agent?: string, ref?: string) {
   }
 }
 
-async function updateClaudeCode(ref?: string) {
-  // Update config
-  await updateConfig(ref)
+async function updateConfigAndSkills(ref?: string) {
+  log('Checking config version...')
+  const currentConfigSha = await getCurrentVersion()
+  const currentSkillsSha = await getSkillsVersion()
 
-  // Update skills
-  await updateSkills(ref)
-}
+  log('Fetching latest vibe-cokit version...')
+  const targetSha = await getRemoteSha(ref)
 
-async function updateConfig(ref?: string) {
+  const configUpToDate = currentConfigSha === targetSha
+  const skillsUpToDate = currentSkillsSha === targetSha && (await dirExists(CLAUDE_SKILLS_DIR))
+
+  if (configUpToDate && skillsUpToDate) {
+    log(`Config: up-to-date (${targetSha.slice(0, 8)})`)
+    log(`Skills: up-to-date (${targetSha.slice(0, 8)})`)
+    return
+  }
+
   const tmpDir = join(TEMP_DIR, crypto.randomUUID())
 
   try {
-    log('Checking config version...')
-    const currentSha = await getCurrentVersion()
-
-    log('Fetching latest config version...')
-    const targetSha = await getRemoteSha(ref)
-
-    if (currentSha && currentSha === targetSha) {
-      log(`Config: up-to-date (${currentSha.slice(0, 8)})`)
-      return
-    }
-
     log('Cloning vibe-cokit configuration...')
     await cloneRepo(tmpDir)
 
@@ -123,128 +85,27 @@ async function updateConfig(ref?: string) {
       await exec('git', ['-C', tmpDir, 'checkout', ref])
     }
 
-    log('Updating config folders in ~/.claude/')
-    await copyConfigFolders(tmpDir)
-
     const sha = await getCommitSha(tmpDir)
-    await updateSettings(sha)
 
-    const from = currentSha ? currentSha.slice(0, 8) : 'none'
-    log(`Config updated: ${from} → ${sha.slice(0, 8)}`)
-  } finally {
-    await cleanup(tmpDir)
-  }
-}
-
-async function updateSkills(ref?: string, destDir?: string) {
-  const tmpDir = join(TEMP_DIR, crypto.randomUUID())
-
-  try {
-    log('Checking skills version...')
-    const currentSha = await getSkillsVersion()
-
-    log('Fetching latest skills version...')
-    const targetSha = await getRemoteSha(ref, SKILLS_REPO)
-
-    const target = destDir ?? CLAUDE_SKILLS_DIR
-    const destExists = await dirExists(target)
-
-    if (currentSha && currentSha === targetSha && destExists) {
-      log(`Skills: up-to-date (${currentSha.slice(0, 8)})`)
-      return
+    if (configUpToDate) {
+      log(`Config: up-to-date (${targetSha.slice(0, 8)})`)
+    } else {
+      log('Updating config folders in ~/.claude/')
+      await copyConfigFolders(tmpDir)
+      await updateSettings(sha)
+      const from = currentConfigSha ? currentConfigSha.slice(0, 8) : 'none'
+      log(`Config updated: ${from} → ${sha.slice(0, 8)}`)
     }
 
-    log('Cloning skills repository...')
-    await cloneRepo(tmpDir, SKILLS_REPO)
-
-    if (ref) {
-      log(`Checking out ${ref}...`)
-      await exec('git', ['-C', tmpDir, 'checkout', ref])
+    if (skillsUpToDate) {
+      log(`Skills: up-to-date (${targetSha.slice(0, 8)})`)
+    } else {
+      log(`Updating skills in ${CLAUDE_SKILLS_DIR}/`)
+      await copySkillFolders(join(tmpDir, 'skills'))
+      await updateSkillsVersion(sha)
+      const from = currentSkillsSha ? currentSkillsSha.slice(0, 8) : 'none'
+      log(`Skills updated: ${from} → ${sha.slice(0, 8)}`)
     }
-
-    log(`Updating skills in ${target}/`)
-    await copySkillFolders(tmpDir, target)
-
-    const sha = await getCommitSha(tmpDir)
-    await updateSkillsVersion(sha)
-
-    const from = currentSha ? currentSha.slice(0, 8) : 'none'
-    log(`Skills updated: ${from} → ${sha.slice(0, 8)}`)
-  } finally {
-    await cleanup(tmpDir)
-  }
-}
-
-async function updateAntigravity(ref?: string) {
-  const tmpDir = join(TEMP_DIR, crypto.randomUUID())
-
-  try {
-    log('Checking antigravity version...')
-    const currentSha = await getAntigravityVersion()
-
-    log('Fetching latest antigravity version...')
-    const targetSha = await getRemoteSha(ref, ANTIGRAVITY_REPO)
-
-    if (currentSha && currentSha === targetSha) {
-      log(`Antigravity: up-to-date (${currentSha.slice(0, 8)})`)
-      return
-    }
-
-    log('Cloning antigravity repository...')
-    await cloneRepo(tmpDir, ANTIGRAVITY_REPO)
-
-    if (ref) {
-      log(`Checking out ${ref}...`)
-      await exec('git', ['-C', tmpDir, 'checkout', ref])
-    }
-
-    log('Updating .agents/ folder...')
-    await copyAgentFolder(tmpDir)
-
-    const sha = await getCommitSha(tmpDir)
-    await updateAntigravityVersion(sha)
-
-    const from = currentSha ? currentSha.slice(0, 8) : 'none'
-    log(`Antigravity updated: ${from} → ${sha.slice(0, 8)}`)
-  } finally {
-    await cleanup(tmpDir)
-  }
-}
-
-async function updateOpenCode(ref?: string) {
-  const tmpDir = join(TEMP_DIR, crypto.randomUUID())
-
-  try {
-    log('Checking OpenCode kit version...')
-    const currentSha = await getOpenCodeVersion()
-
-    log('Fetching latest OpenCode kit version...')
-    const targetSha = await getRemoteSha(ref, REPO)
-
-    if (currentSha && currentSha === targetSha) {
-      log(`OpenCode kit: up-to-date (${currentSha.slice(0, 8)})`)
-      return
-    }
-
-    log('Cloning Claude Code source...')
-    await cloneRepo(tmpDir, REPO)
-
-    if (ref) {
-      log(`Checking out ${ref}...`)
-      await exec('git', ['-C', tmpDir, 'checkout', ref])
-    }
-
-    log('Generating OpenCode kit...')
-    await buildOpenCodeKit(tmpDir)
-
-    log('Updating OpenCode kit in current project...')
-    await copyOpenCodeKit(tmpDir)
-
-    const sha = await getCommitSha(tmpDir)
-    await updateOpenCodeVersion(sha)
-
-    const from = currentSha ? currentSha.slice(0, 8) : 'none'
-    log(`OpenCode kit updated: ${from} -> ${sha.slice(0, 8)}`)
   } finally {
     await cleanup(tmpDir)
   }

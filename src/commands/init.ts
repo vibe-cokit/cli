@@ -1,54 +1,23 @@
 import { join } from 'path'
 import {
   TEMP_DIR,
-  REPO,
-  ANTIGRAVITY_REPO,
-  SKILLS_REPO,
   log,
   verifyPrerequisites,
   cloneRepo,
   copyConfigFolders,
   copyClaudeMd,
-  copySkillFolders,
   runClaudeInit,
   getCommitSha,
   updateSettings,
   cleanup,
-  copyAgentFolder,
-  copyOpenCodeKit,
-  ensureGitignore,
-  updateOpenCodeVersion,
 } from '../utils/config'
-import { buildOpenCodeKit } from '../utils/opencode-kit'
 import { getErrorMsg, logError } from '../utils/helpers'
 
-const VALID_AGENTS = ['claude-code', 'antigravity', 'opencode'] as const
-type AgentType = (typeof VALID_AGENTS)[number]
-
-export async function initCommand(agent?: string) {
-  const agentType: AgentType = (agent as AgentType) ?? 'claude-code'
-
-  if (!VALID_AGENTS.includes(agentType)) {
-    console.error(`\n✗ Unknown agent type: "${agent}"`)
-    console.error(`  Available agents: ${VALID_AGENTS.join(', ')}\n`)
-    process.exit(1)
-  }
-
-  switch (agentType) {
-    case 'claude-code':
-      return initClaudeCode()
-    case 'antigravity':
-      return initAntigravity()
-    case 'opencode':
-      return initOpenCode()
-  }
-}
-
-async function initClaudeCode() {
+export async function initCommand() {
   const tmpDir = join(TEMP_DIR, crypto.randomUUID())
 
   try {
-    console.log('\nvibe-cokit init (claude-code)\n')
+    console.log('\nvibe-cokit init\n')
 
     log('Verifying prerequisites...')
     await verifyPrerequisites()
@@ -73,88 +42,6 @@ async function initClaudeCode() {
     console.log(`  Version: ${sha.slice(0, 8)}`)
     console.log(`  Config:  ~/.claude/`)
     console.log(`  Claude:  ./CLAUDE.md\n`)
-  } catch (err) {
-    logError('init', err)
-    console.error(`\n✗ Init failed: ${getErrorMsg(err)}\n`)
-    process.exit(1)
-  } finally {
-    await cleanup(tmpDir)
-  }
-}
-
-async function initAntigravity() {
-  const tmpDir = join(TEMP_DIR, crypto.randomUUID())
-
-  try {
-    console.log('\nvibe-cokit init (antigravity)\n')
-
-    log('Verifying prerequisites...')
-    await verifyPrerequisites()
-
-    log('Cloning antigravity configuration...')
-    await cloneRepo(tmpDir, ANTIGRAVITY_REPO)
-
-    log('Copying agent config to .agents/...')
-    await copyAgentFolder(tmpDir)
-
-    const skillsTmpDir = join(TEMP_DIR, crypto.randomUUID())
-    try {
-      log('Cloning skills repository...')
-      await cloneRepo(skillsTmpDir, SKILLS_REPO)
-
-      log('Installing skills to .agent/skills/...')
-      await copySkillFolders(skillsTmpDir, join(process.cwd(), '.agent', 'skills'))
-    } finally {
-      await cleanup(skillsTmpDir)
-    }
-
-    log('Updating .gitignore...')
-    await ensureGitignore('.agents')
-    await ensureGitignore('.agent')
-
-    log('Updating version tracking...')
-    const sha = await getCommitSha(tmpDir)
-    await updateSettings(sha)
-
-    console.log('\n✓ Antigravity initialized successfully!')
-    console.log(`  Version: ${sha.slice(0, 8)}`)
-    console.log(`  Agent:   ./.agents/\n`)
-  } catch (err) {
-    logError('init', err)
-    console.error(`\n✗ Init failed: ${getErrorMsg(err)}\n`)
-    process.exit(1)
-  } finally {
-    await cleanup(tmpDir)
-  }
-}
-
-async function initOpenCode() {
-  const tmpDir = join(TEMP_DIR, crypto.randomUUID())
-
-  try {
-    console.log('\nvibe-cokit init (opencode)\n')
-
-    log('Verifying prerequisites...')
-    await verifyPrerequisites()
-
-    log('Cloning Claude Code source...')
-    await cloneRepo(tmpDir, REPO)
-
-    log('Generating OpenCode kit...')
-    await buildOpenCodeKit(tmpDir)
-
-    log('Installing OpenCode kit into current project...')
-    await copyOpenCodeKit(tmpDir)
-
-    log('Updating version tracking...')
-    const sha = await getCommitSha(tmpDir)
-    await updateOpenCodeVersion(sha)
-
-    console.log('\n✓ OpenCode kit initialized successfully!')
-    console.log(`  Version:  ${sha.slice(0, 8)}`)
-    console.log('  Config:   ./opencode.jsonc')
-    console.log('  Agents:   ./.opencode/')
-    console.log('  Rules:    ./AGENTS.md\n')
   } catch (err) {
     logError('init', err)
     console.error(`\n✗ Init failed: ${getErrorMsg(err)}\n`)
